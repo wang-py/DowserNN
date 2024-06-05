@@ -2,6 +2,7 @@ import sys
 import math
 import numpy as np
 import matplotlib.pyplot as plt
+import time
 
 
 def parse_pdb_file(file_path):
@@ -43,15 +44,28 @@ def calculate_distance(atom1, atom2):
 
 
 def find_closest_distances(waters, atoms):
-    distances = []
-    for water in waters:
-        min_distance = float("inf")
-        for atom in atoms:
-            distance = calculate_distance(water, atom)
-            if distance < min_distance:
-                min_distance = distance
-        distances.append(min_distance)
-    return distances
+    min_distances = []
+    water_coors = np.array([np.fromiter(water.values(), dtype=float)[0:3] for
+                            water in waters])
+    atoms_coords = np.array([np.fromiter(atom.values(), dtype=float) for
+                             atom in atoms])
+    for water_coor in water_coors:
+        delta = water_coor - atoms_coords
+        delta_sq = np.square(delta)
+        dist = np.sqrt(np.sum(delta_sq, axis=1))
+        min_distances.append(dist.min())
+
+    return min_distances
+# def find_closest_distances(waters, atoms):
+#     distances = []
+#     for water in waters:
+#         min_distance = float("inf")
+#         for atom in atoms:
+#             distance = calculate_distance(water, atom)
+#             if distance < min_distance:
+#                 min_distance = distance
+#         distances.append(min_distance)
+#     return distances
 
 
 def plot_distances(waters, distances):
@@ -103,8 +117,12 @@ if __name__ == "__main__":
         " non-water atoms (excluding hydrogens)."
     )
 
+    distance_calc_start = time.time()
     print("Calculating closest distances...")
     distances = find_closest_distances(waters, atoms)
+    distance_calc_end = time.time()
+    distance_calc_time = distance_calc_end - distance_calc_start
+    print(f"distance calculation took {distance_calc_time:.2f} seconds")
 
     print("Plotting distances...")
     plot_distances(waters, distances)
