@@ -20,6 +20,12 @@ def plot_distance_hist(bins, this_xlabel, distribution, save=False):
     ax.tick_params(axis='x', labelsize=font_size)
     ax.tick_params(axis='y', labelsize=font_size)
 
+    # crystal structure line
+    # get mean of distribution
+    distribution_mean = np.mean(distribution)
+    distribution_mean_str = f"{distribution_mean:.2f}"
+    ax.axvline(distribution_mean, color='k', linestyle='--',
+               label='mean = ' + distribution_mean_str + ' A')
     # histogram with colors
     N, bin_min, patches = ax.hist(distribution, bins, density=True)
     fracs = N / N.max()
@@ -28,6 +34,7 @@ def plot_distance_hist(bins, this_xlabel, distribution, save=False):
         color = plt.cm.viridis(norm(thisfrac))
         thispatch.set_facecolor(color)
 
+    ax.legend(loc='best')
     if save:
         plt.savefig(this_xlabel+".png", dpi=200)
     plt.show()
