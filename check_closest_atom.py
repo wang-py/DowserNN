@@ -2,7 +2,35 @@ import sys
 import math
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib import colors
 import time
+
+
+def plot_distance_hist(bins, this_xlabel, distribution, save=False):
+    # font size
+    font_size = 11
+
+    # plotting distribution distribution
+    # ax.set(title = 'Distribution of movement in one direction')
+    fig, ax = plt.subplots()
+    if this_xlabel:
+        ax.set(xlabel=this_xlabel + ' distribution [A]')
+        ax.xaxis.label.set_size(font_size)
+    # ax.set(ylabel = 'Frequency')
+    ax.tick_params(axis='x', labelsize=font_size)
+    ax.tick_params(axis='y', labelsize=font_size)
+
+    # histogram with colors
+    N, bin_min, patches = ax.hist(distribution, bins, density=True)
+    fracs = N / N.max()
+    norm = colors.Normalize(fracs.min(), fracs.max())
+    for thisfrac, thispatch in zip(fracs, patches):
+        color = plt.cm.viridis(norm(thisfrac))
+        thispatch.set_facecolor(color)
+
+    if save:
+        plt.savefig(this_xlabel+".png", dpi=200)
+    plt.show()
 
 
 def parse_pdb_file(file_path):
@@ -119,10 +147,12 @@ if __name__ == "__main__":
 
     distance_calc_start = time.time()
     print("Calculating closest distances...")
-    distances = find_closest_distances(waters, atoms)
+    closest_distances = find_closest_distances(waters, atoms)
     distance_calc_end = time.time()
     distance_calc_time = distance_calc_end - distance_calc_start
     print(f"distance calculation took {distance_calc_time:.2f} seconds")
 
     print("Plotting distances...")
-    plot_distances(waters, distances)
+    plot_distances(waters, closest_distances)
+    print("Plotting distributions...")
+    plot_distance_hist(20, "shortest disance", closest_distances)
