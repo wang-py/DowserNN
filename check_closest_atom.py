@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from matplotlib import colors
 from glob import glob
 import time
+import os.path
 
 
 def plot_distance_hist(bins, this_xlabel, distribution, save=False):
@@ -188,10 +189,15 @@ if __name__ == "__main__":
     pdb_file_path = sys.argv[1]
     pdb_files = glob(pdb_file_path + "/*.pdb")
 
-    all_closest_distances = get_all_nth_closest_distances(pdb_files, n=2)
-    total_num_of_water = all_closest_distances.shape[0]
-    print(f"Found {total_num_of_water} water molecules")
-    print("Plotting distances...")
+    if not os.path.isfile('all_closest_distances.txt'):
+        all_closest_distances = get_all_nth_closest_distances(pdb_files, n=2)
+        total_num_of_water = all_closest_distances.shape[0]
+        print(f"Found {total_num_of_water} water molecules")
+        print("Plotting distances...")
+        np.savetxt("all_closest_distances.txt", all_closest_distances,
+                   fmt='%.3f')
+    else:
+        all_closest_distances = np.loadtxt('all_closest_distances.txt')
     # plot_distances(waters, closest_distances)
     # print("Plotting distributions...")
     plot_distance_hist(60, "2nd shortest distance histogram",
