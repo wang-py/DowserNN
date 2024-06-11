@@ -93,8 +93,19 @@ def find_closest_distances(waters, atoms):
     return min_distances
 
 
-def find_nth_closest_distance(sorted_distances, n):
-    return sorted_distances[n-1]
+def find_nth_closest_distances(waters, atoms, n):
+    water_coors = np.array([np.fromiter(water.values(), dtype=float)[0:3] for
+                            water in waters])
+    water_coors = water_coors.astype(float)
+    atoms_coords = np.array([np.fromiter(atom.values(), dtype=float) for
+                             atom in atoms])
+    nth_min_distances = []
+    for water_coor in water_coors:
+        dist = find_distances(water_coor, atoms_coords)
+        sorted_dist = np.sort(dist)
+        nth_min_distances.append(sorted_dist[n - 1])
+
+    return nth_min_distances
 # def find_closest_distances(waters, atoms):
 #     distances = []
 #     for water in waters:
@@ -144,7 +155,7 @@ def plot_distances(waters, distances, title, savefig=False):
     # plt.show()
 
 
-def get_all_closest_distances(input_pdbs):
+def get_all_nth_closest_distances(input_pdbs, n):
     all_closest_distances = np.array([])
     for one_pdb in input_pdbs:
         pdb_filename = one_pdb.split('/')[1].split('.')[0]
@@ -156,13 +167,13 @@ def get_all_closest_distances(input_pdbs):
         )
         distance_calc_start = time.time()
         print("Calculating closest distances...")
-        closest_distances = find_closest_distances(waters, atoms)
+        closest_distances = find_nth_closest_distances(waters, atoms, n)
         distance_calc_end = time.time()
         distance_calc_time = distance_calc_end - distance_calc_start
         print(f"distance calculation took {distance_calc_time:.2f} seconds")
-        plot_distances(waters, closest_distances, pdb_filename, savefig=False)
-        plot_distance_hist(20, pdb_filename + "_hist", closest_distances,
-                           save=False)
+        # plot_distances(waters, closest_distances, pdb_filename, savefig=False)
+        # plot_distance_hist(20, pdb_filename + "_hist", closest_distances,
+        #                    save=False)
         all_closest_distances = np.append(all_closest_distances,
                                           closest_distances)
 
@@ -177,13 +188,13 @@ if __name__ == "__main__":
     pdb_file_path = sys.argv[1]
     pdb_files = glob(pdb_file_path + "/*.pdb")
 
-    all_closest_distances = get_all_closest_distances(pdb_files)
+    all_closest_distances = get_all_nth_closest_distances(pdb_files, n=2)
     total_num_of_water = all_closest_distances.shape[0]
     print(f"Found {total_num_of_water} water molecules")
     print("Plotting distances...")
     # plot_distances(waters, closest_distances)
     # print("Plotting distributions...")
-    plot_distance_hist(60, "shortest distance histogram",
+    plot_distance_hist(60, "2nd shortest distance histogram",
                        all_closest_distances, save=True)
     plot_distances(all_closest_distances, all_closest_distances,
-                   "all shortest distances", savefig=True)
+                   "2nd shortest distances", savefig=True)
