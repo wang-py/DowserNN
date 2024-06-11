@@ -61,8 +61,8 @@ def parse_pdb_file(file_path):
                     }
             elif (
                 line.startswith("ATOM")
-                or (line.startswith("HETATM") and "HOH" not in line[17:20])
-            ) and line[76:78].strip() != "H":
+                    or (line.startswith("HETATM"))):  # and "HOH" not in line[17:20])
+            # ) and line[76:78].strip() != "H":
                 x = float(line[30:38].strip())
                 y = float(line[38:46].strip())
                 z = float(line[46:54].strip())
@@ -71,28 +71,30 @@ def parse_pdb_file(file_path):
     return np.array(waters), np.array(atoms)
 
 
-def calculate_distance(atom1, atom2):
-    return math.sqrt(
-        (atom1["x"] - atom2["x"]) ** 2
-        + (atom1["y"] - atom2["y"]) ** 2
-        + (atom1["z"] - atom2["z"]) ** 2
-    )
+def find_distances(water_coor, atoms_coords):
+    delta = water_coor - atoms_coords
+    delta_sq = np.square(delta)
+    dist = np.sqrt(np.sum(delta_sq, axis=1))
+
+    return dist
 
 
 def find_closest_distances(waters, atoms):
-    min_distances = []
     water_coors = np.array([np.fromiter(water.values(), dtype=float)[0:3] for
                             water in waters])
     water_coors = water_coors.astype(float)
     atoms_coords = np.array([np.fromiter(atom.values(), dtype=float) for
                              atom in atoms])
+    min_distances = []
     for water_coor in water_coors:
-        delta = water_coor - atoms_coords
-        delta_sq = np.square(delta)
-        dist = np.sqrt(np.sum(delta_sq, axis=1))
+        dist = find_distances(water_coor, atoms_coords)
         min_distances.append(dist.min())
 
     return min_distances
+
+
+def find_nth_closest_distance(sorted_distances, n):
+    return sorted_distances[n-1]
 # def find_closest_distances(waters, atoms):
 #     distances = []
 #     for water in waters:
@@ -132,12 +134,13 @@ def plot_distances(waters, distances, title, savefig=False):
     #                  ha="center")
 
     plt.xlabel("Water Molecule")
-    plt.ylabel("Closest Distance to Non-Water Atom (Å)")
-    plt.title("Closest Distance from Water Molecules to Non-Water Atoms")
+    plt.ylabel("Closest Distance to other Atoms (Å)")
+    plt.title("Closest Distance from Water Molecules other Atoms")
     plt.legend()
     plt.grid(True)
     plt.tight_layout()
-    plt.savefig(title + "_distance.png", dpi=200)
+    if savefig:
+        plt.savefig(title + "_distance.png", dpi=200)
     # plt.show()
 
 
@@ -157,9 +160,9 @@ def get_all_closest_distances(input_pdbs):
         distance_calc_end = time.time()
         distance_calc_time = distance_calc_end - distance_calc_start
         print(f"distance calculation took {distance_calc_time:.2f} seconds")
-        plot_distances(waters, closest_distances, pdb_filename, savefig=True)
+        plot_distances(waters, closest_distances, pdb_filename, savefig=False)
         plot_distance_hist(20, pdb_filename + "_hist", closest_distances,
-                           save=True)
+                           save=False)
         all_closest_distances = np.append(all_closest_distances,
                                           closest_distances)
 
@@ -180,4 +183,7 @@ if __name__ == "__main__":
     print("Plotting distances...")
     # plot_distances(waters, closest_distances)
     # print("Plotting distributions...")
-    plot_distance_hist(20, "shortest disance", all_closest_distances, save=True)
+    plot_distance_hist(60, "shortest distance histogram",
+                       all_closest_distances, save=True)
+    plot_distances(all_closest_distances, all_closest_distances,
+                   "all shortest distances", savefig=True)
