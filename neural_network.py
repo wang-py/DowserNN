@@ -33,11 +33,11 @@ class input_layer:
 
     def forward(self, inputs):
         self.inputs = inputs
-        self.output = relu(np.dot(self.weights, inputs) + self.biases)
+        self.output = sigmoid(np.dot(self.weights, inputs) + self.biases)
         return self.output
 
     def backward(self, output_error, learning_rate):
-        error = output_error * relu_derivative(self.output)
+        error = output_error * sigmoid_derivative(self.output)
         weights_update = np.dot(error.reshape(-1, 1), self.inputs.reshape(1, -1))
         self.weights += learning_rate * weights_update
         self.biases += learning_rate * error
@@ -51,12 +51,12 @@ class hidden_layer:
 
     def forward(self, inputs):
         self.inputs = inputs
-        self.output = sigmoid(np.dot(self.weights, inputs) + self.biases)
+        self.output = relu(np.dot(self.weights, inputs) + self.biases)
         return self.output
 
     def backward(self, expected_output, learning_rate):
         error = expected_output - self.output
-        delta = error * sigmoid_derivative(self.output)
+        delta = error * relu_derivative(self.output)
         weights_update = np.dot(delta.reshape(-1, 1), self.inputs.reshape(1, -1))
         self.weights += learning_rate * weights_update
         self.biases += learning_rate * delta
@@ -94,10 +94,10 @@ class NeuralNetwork:
 
 if __name__ == "__main__":
     # Number of inputs
-    input_size = 1000
+    input_size = 10
 
     # Output size
-    output_size = 1
+    output_size = 10
 
     # Size of hidden layer
     hidden_size = 10
@@ -108,16 +108,18 @@ if __name__ == "__main__":
     # test output
     y = our_function(inputs)
 
-    plt.figure()
-    plt.scatter(inputs, y)
-    plt.show()
+    fig, ax = plt.subplots()
+    ax.scatter(inputs, y)
+    ax.set_title("original function")
 
-    nn = NeuralNetwork(input_size * num_pts, hidden_size, output_size)
+    nn = NeuralNetwork(input_size, hidden_size, output_size)
 
     nn.train(inputs, y, epochs=1000)
 
     outputs = nn.forward(inputs)
-    plt.figure()
-    plt.scatter(inputs, outputs)
+    fig, ax = plt.subplots()
+    ax.scatter(inputs, outputs)
+    ax.set_title("trained function")
+    print("expected output:\n", y)
+    print("trained output:\n", outputs)
     plt.show()
-
