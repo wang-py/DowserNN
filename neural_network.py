@@ -1,5 +1,4 @@
 import numpy as np
-<<<<<<< HEAD
 import matplotlib.pyplot as plt
 
 
@@ -102,58 +101,10 @@ if __name__ == "__main__":
 
     # Size of hidden layer
     hidden_size = 10
-=======
-
-
-# Define the sigmoid activation function
-def sigmoid(x):
-    return 1 / (1 + np.exp(-x))
-
-
-# Define the ReLU activation function
-def relu(x):
-    return np.maximum(0, x)
-
-
-# Define the neural network class
-class NeuralNetwork:
-    def __init__(self, input_size, hidden_size, output_size):
-        self.input_size = input_size
-        self.hidden_size = hidden_size
-        self.output_size = output_size
-
-        # Initialize weights and biases randomly
-        self.weights_input_hidden = np.random.rand(hidden_size, input_size)
-        self.biases_hidden = np.random.rand(hidden_size)
-        self.weights_hidden_output = np.random.rand(output_size, hidden_size)
-        self.biases_output = np.random.rand(output_size)
-
-    def forward(self, inputs):
-        # Forward pass through hidden layer
-        hidden_input = np.dot(self.weights_input_hidden, inputs) + self.biases_hidden
-        hidden_output = relu(hidden_input)
-
-        # Forward pass through output layer
-        final_input = (
-            np.dot(self.weights_hidden_output, hidden_output) + self.biases_output
-        )
-        final_output = sigmoid(final_input)
-
-        return final_output
-
-
-if __name__ == "__main__":
-    # Number of inputs
-    input_size = 1
-
-    # Number of neurons
-    num_neurons = 10
->>>>>>> 955efe0 (added hidden layer)
 
     # Generate random input data
     inputs = np.random.rand(input_size)
 
-<<<<<<< HEAD
     # test output
     y = our_function(inputs)
 
@@ -184,21 +135,3 @@ if __name__ == "__main__":
     print("test outputs:\n", test_outputs)
     print("trained output with test input:\n", predicted_outputs)
     plt.show()
-=======
-    # Initialize weights and biases randomly for each neuron
-    weights = np.random.rand(num_neurons, input_size)
-    biases = np.random.rand(num_neurons)
-
-    # Compute the weighted sum (z) for each neuron
-    z = np.dot(weights, inputs) + biases
-
-    # Apply the activation function to each neuron's weighted sum
-    outputs = sigmoid(z)
-
-    # Print the inputs, weights, biases, weighted sums, and outputs
-    print("Inputs: ", inputs)
-    print("Weights: ", weights)
-    print("Biases: ", biases)
-    print("Weighted sums (z): ", z)
-    print("Outputs (after activation): ", outputs)
->>>>>>> 955efe0 (added hidden layer)
