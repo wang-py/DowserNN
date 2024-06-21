@@ -108,18 +108,23 @@ if __name__ == "__main__":
     # test output
     y = our_function(inputs)
 
-    fig, ax = plt.subplots()
-    ax.scatter(inputs, y)
-    ax.set_title("original function")
-
     nn = NeuralNetwork(input_size, hidden_size, output_size)
 
     nn.train(inputs, y, epochs=1000)
 
     outputs = nn.forward(inputs)
-    fig, ax = plt.subplots()
-    ax.scatter(inputs, outputs)
-    ax.set_title("trained function")
+    test_inputs = np.random.rand(input_size)
+    test_outputs = nn.forward(test_inputs)
+    fig, ax = plt.subplots(3, 1)
+    ax[0].scatter(inputs, y)
+    ax[0].set_title("original function")
+
+    ax[1].scatter(inputs, outputs)
+    ax[1].set_title("trained function")
+
+    ax[2].scatter(inputs, test_outputs)
+    ax[2].set_title("trained function using different input")
     print("expected output:\n", y)
     print("trained output:\n", outputs)
+    print("trained output with test input:\n", test_outputs)
     plt.show()
