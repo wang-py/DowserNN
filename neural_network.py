@@ -94,10 +94,10 @@ class NeuralNetwork:
 
 if __name__ == "__main__":
     # Number of inputs
-    input_size = 10
+    input_size = 100
 
     # Output size
-    output_size = 10
+    output_size = 100
 
     # Size of hidden layer
     hidden_size = 10
@@ -114,17 +114,24 @@ if __name__ == "__main__":
 
     outputs = nn.forward(inputs)
     test_inputs = np.random.rand(input_size)
-    test_outputs = nn.forward(test_inputs)
-    fig, ax = plt.subplots(3, 1)
+    test_outputs = our_function(test_inputs)
+    predicted_outputs = nn.forward(test_inputs)
+    fig, ax = plt.subplots(4, 1, figsize=(12, 15))
     ax[0].scatter(inputs, y)
-    ax[0].set_title("original function")
+    ax[0].set_xlabel("original function")
 
     ax[1].scatter(inputs, outputs)
-    ax[1].set_title("trained function")
+    ax[1].set_xlabel("trained function")
 
-    ax[2].scatter(inputs, test_outputs)
-    ax[2].set_title("trained function using different input")
+    ax[2].scatter(test_inputs, test_outputs)
+    ax[2].set_xlabel("original function using different input")
+
+    ax[3].scatter(test_inputs, predicted_outputs)
+    ax[3].set_xlabel("trained function using different input")
+    print("original inputs:\n", inputs)
     print("expected output:\n", y)
     print("trained output:\n", outputs)
-    print("trained output with test input:\n", test_outputs)
+    print("test inputs:\n", test_inputs)
+    print("test outputs:\n", test_outputs)
+    print("trained output with test input:\n", predicted_outputs)
     plt.show()
