@@ -18,8 +18,8 @@ def relu_derivative(x) -> float:
     return np.where(x > 0, 1, 0)
 
 
-def SSR(input_data, output):
-    return np.sum(np.square(output - input_data))
+def dSSR(observed, predicted):
+    return np.sum(-2 * (observed - predicted))
 
 
 def our_function(x) -> float:
@@ -27,27 +27,19 @@ def our_function(x) -> float:
 
 
 class input_layer:
-    def __init__(self, input_size, num_neurons):
-        self.weights = np.random.rand(num_neurons, input_size)
-        self.biases = np.random.rand(num_neurons)
+    def __init__(self, input_size, num_of_data):
+        self.weights = np.random.rand(num_of_data, input_size)
+        self.biases = np.random.rand(input_size)
 
     def forward(self, inputs):
-        self.inputs = inputs
-        self.output = sigmoid(np.dot(self.weights, inputs) + self.biases)
-        return self.output
-
-    def backward(self, output_error, learning_rate):
-        error = output_error * sigmoid_derivative(self.output)
-        weights_update = np.dot(error.reshape(-1, 1), self.inputs.reshape(1, -1))
-        self.weights += learning_rate * weights_update
-        self.biases += learning_rate * error
-        return np.dot(self.weights.T, error)
+        self.outputs = relu(np.dot(self.weights, inputs)) + self.biases
+        return self.outputs
 
 
 class hidden_layer:
-    def __init__(self, input_size, num_neurons):
-        self.weights = np.random.rand(num_neurons, input_size)
-        self.biases = np.random.rand(num_neurons)
+    def __init__(self, hidden_size, output_size):
+        self.weights = np.random.rand(output_size, hidden_size)
+        self.biases = np.random.rand(hidden_size)
 
     def forward(self, inputs):
         self.inputs = inputs
@@ -55,12 +47,8 @@ class hidden_layer:
         return self.output
 
     def backward(self, expected_output, learning_rate):
-        error = expected_output - self.output
-        delta = error * relu_derivative(self.output)
-        weights_update = np.dot(delta.reshape(-1, 1), self.inputs.reshape(1, -1))
-        self.weights += learning_rate * weights_update
-        self.biases += learning_rate * delta
-        return np.dot(self.weights.T, delta)
+        step_size = dSSR(expected_output, self.output) * learning_rate
+        self.biases -= step_size
 
 
 # Define the NeuralNetwork class
@@ -71,9 +59,9 @@ class NeuralNetwork:
         self.hidden_layer = hidden_layer(hidden_size, output_size)
 
     def forward(self, inputs):
-        hidden_output = self.input_layer.forward(inputs)
-        final_output = self.hidden_layer.forward(hidden_output)
-        return final_output
+        input_layer_output = self.input_layer.forward(inputs)
+        hidden_layer_output = self.hidden_layer.forward(input_layer_output)
+        return hidden_layer_output
 
     def train(self, inputs, expected_output, epochs=1000):
         for epoch in range(epochs):
@@ -81,10 +69,9 @@ class NeuralNetwork:
             actual_output = self.forward(inputs)
 
             # Backward pass
-            hidden_error = self.hidden_layer.backward(
+            self.hidden_layer.backward(
                 expected_output, self.learning_rate
             )
-            self.input_layer.backward(hidden_error, self.learning_rate)
 
             # Calculate loss
             loss = np.mean((expected_output - actual_output) ** 2)
@@ -94,23 +81,26 @@ class NeuralNetwork:
 
 if __name__ == "__main__":
     # Number of inputs
-    input_size = 100
+    input_size = 10
 
     # Output size
-    output_size = 100
+    output_size = 1
 
     # Size of hidden layer
     hidden_size = 10
 
+    # Number of data
+    num_of_data = 100
+
     # Generate random input data
-    inputs = np.random.rand(input_size)
+    inputs = np.random.rand(num_of_data * input_size)
 
     # test output
     y = our_function(inputs)
 
     nn = NeuralNetwork(input_size, hidden_size, output_size)
 
-    nn.train(inputs, y, epochs=1000)
+    nn.train(inputs.reshape([num_of_data, input_size]), y, epochs=2000)
 
     outputs = nn.forward(inputs)
     test_inputs = np.random.rand(input_size)

@@ -53,7 +53,7 @@ plt.legend()
 
 # Plot expected vs predicted outputs
 plt.subplot(1, 2, 2)
-plt.plot(sorted_inputs, expected_outputs, label='Expected Output', color='blue')
+plt.scatter(sorted_inputs, expected_outputs, label='Expected Output', color='blue')
 plt.scatter(sorted_inputs, sorted_outputs, label='Predicted Output', color='red')
 plt.xlabel('Input')
 plt.ylabel('Output')
