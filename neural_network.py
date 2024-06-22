@@ -29,17 +29,17 @@ def our_function(x) -> float:
 class input_layer:
     def __init__(self, input_size, num_of_data):
         self.weights = np.random.rand(num_of_data, input_size)
-        self.biases = np.random.rand(input_size)
+        self.biases = np.random.rand(input_size, 1)
 
     def forward(self, inputs):
-        self.outputs = relu(np.dot(self.weights, inputs)) + self.biases
+        self.outputs = relu(np.dot(self.weights, inputs) + self.biases)
         return self.outputs
 
 
 class hidden_layer:
     def __init__(self, hidden_size, output_size):
         self.weights = np.random.rand(output_size, hidden_size)
-        self.biases = np.random.rand(hidden_size)
+        self.biases = np.random.rand(hidden_size, 1)
 
     def forward(self, inputs):
         self.inputs = inputs
@@ -48,7 +48,8 @@ class hidden_layer:
 
     def backward(self, expected_output, learning_rate):
         step_size = dSSR(expected_output, self.output) * learning_rate
-        self.biases -= step_size
+        self.biases -= step_size * self.biases
+        self.weights -= step_size * self.weights
 
 
 # Define the NeuralNetwork class
@@ -96,11 +97,11 @@ if __name__ == "__main__":
     inputs = np.random.rand(num_of_data * input_size)
 
     # test output
-    y = our_function(inputs)
+    y = our_function(inputs).reshape([input_size, hidden_size])
 
     nn = NeuralNetwork(input_size, hidden_size, output_size)
 
-    nn.train(inputs.reshape([num_of_data, input_size]), y, epochs=2000)
+    nn.train(inputs.reshape([input_size, num_of_data]), y, epochs=2000)
 
     outputs = nn.forward(inputs)
     test_inputs = np.random.rand(input_size)
