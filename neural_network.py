@@ -25,6 +25,7 @@ def our_function(x) -> float:
     # output = np.zeros(x.size)
     # output[x > 0.1] = 1
 
+
 def softmax(xi, xj):
     return np.exp(xi) / np.sum(np.exp(xj))
 
@@ -90,7 +91,7 @@ class output_layer:
 # Define the NeuralNetwork class
 class NeuralNetwork:
     def __init__(self, input_size, num_of_data, hidden_size, output_size,
-                 learning_rate=0.01):
+                 learning_rate=0.001):
         self.learning_rate = learning_rate
         self.hidden_layer = hidden_layer(input_size, hidden_size)
         self.output_layer = output_layer(hidden_size, output_size)
@@ -103,7 +104,7 @@ class NeuralNetwork:
     def dSSR(self, expected, predicted):
         return -2 * (expected - predicted)
 
-    def train(self, inputs, expected_output, epochs=100):
+    def train(self, inputs, expected_output, epochs=500):
         for epoch in range(epochs):
             # Forward pass
             predicted_output = self.forward(inputs)
@@ -144,7 +145,7 @@ if __name__ == "__main__":
 
     nn = NeuralNetwork(input_size, num_of_data, hidden_size, output_size)
 
-    nn.train(inputs.reshape([input_size, num_of_data]), y, epochs=100)
+    nn.train(inputs.reshape([input_size, num_of_data]), y, epochs=5000)
 
     outputs = nn.forward(inputs.reshape([input_size, num_of_data]))
     print("shape of outputs:", outputs.shape)
