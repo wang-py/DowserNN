@@ -49,18 +49,18 @@ def calculate_gradient(Z1, A1, Z2, A2, W2, X, dSSR):
     dSSRdW2 = dSSR.dot(A1.T)
     dW2 = np.sum(dSSRdW2, axis=1)
     db2 = np.sum(dSSR, axis=1)
-    dSSRdW1 = W2.dot(dSSR).dot(relu_derivative(Z1).T).dot(X)
+    dSSRdW1 = dSSR * W2 * relu_derivative(Z1).T * X
     dW1 = np.sum(dSSRdW1, axis=1)
-    dSSRdb1 = W2.dot(dSSR).dot(relu_derivative(Z1).T)
+    dSSRdb1 = dSSR * W2 * relu_derivative(Z1).T
     db1 = np.sum(dSSRdb1, axis=1)
 
     return dW1, db1, dW2, db2
 
 
 def gradient_descent(W1, b1, W2, b2, dW1, db1, dW2, db2, step_size):
-    W1 -= dW1 * step_size
+    W1 -= dW1.reshape(-1, 1) * step_size
     b1 -= db1.reshape(-1, 1) * step_size
-    W2 -= dW2 * step_size
+    W2 -= dW2.reshape(-1, 1) * step_size
     b2 -= db2.reshape(-1, 1) * step_size
 
     return W1, b1, W2, b2
@@ -93,16 +93,16 @@ def train(W1, b1, W2, b2, X, y, step_size, iters):
 
 if __name__ == "__main__":
     # Number of inputs
-    input_dim = 3
+    input_dim = 1
 
     # Output size
-    output_size = 3
+    output_size = 1
 
     # Size of hidden layer
-    hidden_size = 3
+    hidden_size = 2
 
     # Number of data
-    num_of_data = 20
+    num_of_data = 3
 
     # Generate random input data
     inputs = np.random.rand(input_dim * num_of_data)
@@ -114,14 +114,18 @@ if __name__ == "__main__":
     b2 = np.zeros([input_dim, 1])
 
     y = our_function(inputs)
-    W1, b1, W2, b2, A2 = train(W1, b1, W2, b2,
-                               inputs.reshape([input_dim, num_of_data]),
-                               y.reshape([input_dim, num_of_data]),
-                               step_size=0.0001, iters=15000)
+    inputs_reshaped = inputs.reshape([input_dim, num_of_data])
+    y_reshaped = y.reshape([input_dim, num_of_data])
+    for i in range(num_of_data):
+        W1, b1, W2, b2, A2 = train(W1, b1, W2, b2,
+                                   inputs_reshaped[:, i],
+                                   y_reshaped[:, i],
+                                   step_size=0.01, iters=200)
 
     # test output
     test_X = np.random.rand(num_of_data * input_dim)
     y = our_function(test_X)
+    A2 = forward(W1, b1, W2, b2, inputs.reshape([input_dim, num_of_data]))[3]
 
     validation_inputs = np.random.rand(num_of_data * input_dim)
     validation_outputs = our_function(validation_inputs)
