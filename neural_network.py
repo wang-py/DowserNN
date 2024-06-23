@@ -22,6 +22,12 @@ def our_function(x) -> float:
     output = np.power(x, 3) + 2 * np.power(x, 2) + 10
     return output
 
+
+def generate_input(input_dim, output_dim, num_of_data):
+    X = np.random.rand(input_dim, num_of_data)
+    y = np.random.rand(output_dim, num_of_data)
+    return X, y
+
     # output = np.zeros(x.size)
     # output[x > 0.1] = 1
 
@@ -68,7 +74,7 @@ class hidden_layer:
 class output_layer:
     def __init__(self, hidden_size, output_size):
         self.weights = np.random.rand(output_size, hidden_size)
-        self.biases = np.zeros(output_size)
+        self.biases = np.zeros(hidden_size)
         print("output layer weights: ", self.weights)
         print("output layer biases: ", self.biases)
 
@@ -97,7 +103,7 @@ class NeuralNetwork:
     def __init__(self, input_size, num_of_data, hidden_size, output_size,
                  learning_rate=0.001):
         self.learning_rate = learning_rate
-        self.hidden_layer = hidden_layer(input_size, hidden_size)
+        self.hidden_layer = hidden_layer(input_size, num_of_data)
         self.output_layer = output_layer(hidden_size, output_size)
 
     def forward(self, inputs):
@@ -129,7 +135,7 @@ class NeuralNetwork:
 
 if __name__ == "__main__":
     # Number of inputs
-    input_size = 1
+    input_size = 2
 
     # Output size
     output_size = 1
@@ -141,36 +147,38 @@ if __name__ == "__main__":
     num_of_data = 3
 
     # Generate random input data
-    inputs = np.random.rand(num_of_data * input_size)
+    inputs = np.random.rand(input_size, num_of_data)
 
     # test output
     # y = np.random.rand(num_of_data)
-    y = our_function(inputs).reshape([input_size, num_of_data])
+    # y = our_function(inputs)
+
+    X, y = generate_input(input_size, output_size, num_of_data)
 
     nn = NeuralNetwork(input_size, num_of_data, hidden_size, output_size)
 
-    nn.train(inputs.reshape([input_size, num_of_data]), y, epochs=500)
+    nn.train(X, y, epochs=500)
 
-    outputs = nn.forward(inputs.reshape([input_size, num_of_data]))
+    outputs = nn.forward(inputs)
     print("shape of outputs:", outputs.shape)
-    validation_inputs = np.random.rand(num_of_data * input_size)
-    validation_outputs = our_function(validation_inputs)
-    predicted_outputs = nn.forward(validation_inputs.reshape([input_size, num_of_data]))
+    # validation_inputs = np.random.rand(num_of_data * input_size)
+    # jvalidation_outputs = our_function(validation_inputs)
+    # predicted_outputs = nn.forward(validation_inputs.reshape([input_size, num_of_data]))
     print("original inputs:\n", inputs)
     print("expected output:\n", y)
     print("trained output:\n", outputs)
-    print("validation inputs:\n", validation_inputs)
-    print("validation outputs:\n", validation_outputs)
-    print("trained output with test input:\n", predicted_outputs)
-    fig, ax = plt.subplots(2, 1, figsize=(12, 10))
-    ax[0].scatter(inputs, y, label="original function", color='b')
-    ax[0].scatter(inputs, outputs.flatten(), label="trained function", color='r')
-    ax[0].legend()
+    # print("validation inputs:\n", validation_inputs)
+    # print("validation outputs:\n", validation_outputs)
+    # print("trained output with test input:\n", predicted_outputs)
+    fig, ax = plt.subplots(figsize=(12, 10))
+    ax.scatter(inputs, y, label="original function", color='b')
+    ax.scatter(inputs, outputs.flatten(), label="trained function", color='r')
+    ax.legend()
 
-    ax[1].scatter(validation_inputs, validation_outputs, color='b',
-                  label="original function using different input")
-    ax[1].scatter(validation_inputs, predicted_outputs, color='r',
-                  label="trained function using different input")
-    ax[1].legend()
+    # ax[1].scatter(validation_inputs, validation_outputs, color='b',
+    #               label="original function using different input")
+    # ax[1].scatter(validation_inputs, predicted_outputs, color='r',
+    #               label="trained function using different input")
+    # ax[1].legend()
 
     plt.show()
