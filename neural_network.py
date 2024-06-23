@@ -58,8 +58,10 @@ class hidden_layer:
 
     def backward(self, dSSR, output_layer_weights, learning_rate):
         step_size_w = np.sum(self.dSSRdw(dSSR, output_layer_weights), axis=1) * learning_rate
+        # print(f"step_size_w:{step_size_w}")
         self.weights -= step_size_w.reshape(self.weights.shape)
         step_size_b = np.sum(self.dSSRdb(dSSR, output_layer_weights), axis=1) * learning_rate
+        # print(f"step_size_b:{step_size_b}")
         self.biases -= step_size_b.reshape(self.biases.shape)
 
 
@@ -82,8 +84,10 @@ class output_layer:
     def backward(self, dSSR, learning_rate):
         # updating the weights of each neuron
         step_size_w = np.sum(self.dSSRdw(dSSR), axis=1) * learning_rate
+        # print(f"step_size_w:{step_size_w}")
         self.weights -= step_size_w
         step_size_b = np.sum(dSSR) * learning_rate
+        # print(f"step_size_b:{step_size_b}")
         self.biases -= step_size_b
         return self.weights
 
@@ -134,7 +138,7 @@ if __name__ == "__main__":
     hidden_size = 2
 
     # Number of data
-    num_of_data = 10
+    num_of_data = 3
 
     # Generate random input data
     inputs = np.random.rand(num_of_data * input_size)
