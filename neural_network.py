@@ -46,13 +46,14 @@ def forward(W1, b1, W2, b2, X):
 
 
 def calculate_gradient(Z1, A1, Z2, A2, W2, X, dSSR):
+    N = X.shape[1]
     dSSRdW2 = dSSR.dot(A1.T)
-    dW2 = np.sum(dSSRdW2, axis=1)
-    db2 = np.sum(dSSR, axis=1)
-    dSSRdW1 = dSSR * W2 * relu_derivative(Z1).T * X
-    dW1 = np.sum(dSSRdW1, axis=1)
-    dSSRdb1 = dSSR * W2 * relu_derivative(Z1).T
-    db1 = np.sum(dSSRdb1, axis=1)
+    dW2 = np.sum(dSSRdW2, axis=1) / N
+    db2 = np.sum(dSSR, axis=1) / N
+    dSSRdW1 = W2.dot(dSSR).dot(relu_derivative(Z1).T).dot(X)
+    dW1 = np.sum(dSSRdW1, axis=1) / N
+    dSSRdb1 = W2.dot(dSSR).dot(relu_derivative(Z1).T)
+    db1 = np.sum(dSSRdb1, axis=1) / N
 
     return dW1, db1, dW2, db2
 
@@ -102,25 +103,24 @@ if __name__ == "__main__":
     hidden_size = 2
 
     # Number of data
-    num_of_data = 3
+    num_of_data = 10
 
     # Generate random input data
     inputs = np.random.rand(input_dim * num_of_data)
     # initialilze weights
-    W1 = np.random.rand(hidden_size, input_dim) / np.sqrt(2)
+    W1 = np.random.rand(hidden_size, input_dim) / np.sqrt(input_dim)
     b1 = np.zeros([hidden_size, 1])
 
-    W2 = np.random.rand(input_dim, hidden_size) / np.sqrt(2)
+    W2 = np.random.rand(input_dim, hidden_size) / np.sqrt(hidden_size)
     b2 = np.zeros([input_dim, 1])
 
     y = our_function(inputs)
     inputs_reshaped = inputs.reshape([input_dim, num_of_data])
     y_reshaped = y.reshape([input_dim, num_of_data])
-    for i in range(num_of_data):
-        W1, b1, W2, b2, A2 = train(W1, b1, W2, b2,
-                                   inputs_reshaped[:, i],
-                                   y_reshaped[:, i],
-                                   step_size=0.01, iters=200)
+    W1, b1, W2, b2, A2 = train(W1, b1, W2, b2,
+                               inputs_reshaped,
+                               y_reshaped,
+                               step_size=0.0001, iters=30000)
 
     # test output
     test_X = np.random.rand(num_of_data * input_dim)
