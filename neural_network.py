@@ -48,20 +48,20 @@ def forward(W1, b1, W2, b2, X):
 def calculate_gradient(Z1, A1, Z2, A2, W2, X, dSSR):
     N = X.shape[1]
     dSSRdW2 = dSSR.dot(A1.T)
-    dW2 = np.sum(dSSRdW2, axis=1) / N
+    dW2 = dSSRdW2 / N
     db2 = np.sum(dSSR, axis=1) / N
-    dSSRdW1 = W2.dot(dSSR).dot(relu_derivative(Z1).T).dot(X)
-    dW1 = np.sum(dSSRdW1, axis=1) / N
-    dSSRdb1 = W2.dot(dSSR).dot(relu_derivative(Z1).T)
+    dSSRdW1 = (W2.T.dot(dSSR) * relu_derivative(Z1)).dot(X.T)
+    dW1 = dSSRdW1 / N
+    dSSRdb1 = W2.T.dot(dSSR) * relu_derivative(Z1)
     db1 = np.sum(dSSRdb1, axis=1) / N
 
     return dW1, db1, dW2, db2
 
 
 def gradient_descent(W1, b1, W2, b2, dW1, db1, dW2, db2, step_size):
-    W1 -= dW1.reshape(-1, 1) * step_size
+    W1 -= dW1 * step_size
     b1 -= db1.reshape(-1, 1) * step_size
-    W2 -= dW2.reshape(-1, 1) * step_size
+    W2 -= dW2 * step_size
     b2 -= db2.reshape(-1, 1) * step_size
 
     return W1, b1, W2, b2
@@ -111,8 +111,11 @@ if __name__ == "__main__":
     W1 = np.random.rand(hidden_size, input_dim) / np.sqrt(input_dim)
     b1 = np.zeros([hidden_size, 1])
 
-    W2 = np.random.rand(input_dim, hidden_size) / np.sqrt(hidden_size)
-    b2 = np.zeros([input_dim, 1])
+    W2 = np.random.rand(hidden_size, hidden_size) / np.sqrt(hidden_size)
+    b2 = np.zeros([hidden_size, 1])
+
+    W3 = np.random.rand(output_size, hidden_size) / np.sqrt(hidden_size)
+    b3 = np.zeros([output_size, 1])
 
     y = our_function(inputs)
     inputs_reshaped = inputs.reshape([input_dim, num_of_data])
@@ -120,7 +123,7 @@ if __name__ == "__main__":
     W1, b1, W2, b2, A2 = train(W1, b1, W2, b2,
                                inputs_reshaped,
                                y_reshaped,
-                               step_size=0.0001, iters=30000)
+                               step_size=0.001, iters=3000)
 
     # test output
     test_X = np.random.rand(num_of_data * input_dim)
