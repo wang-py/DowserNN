@@ -57,10 +57,10 @@ class hidden_layer:
                relu_derivative(self.X)
 
     def backward(self, dSSR, output_layer_weights, learning_rate):
-        step_size_b = np.sum(self.dSSRdb(dSSR, output_layer_weights), axis=1) * learning_rate
-        self.biases -= step_size_b.reshape(self.biases.shape)
         step_size_w = np.sum(self.dSSRdw(dSSR, output_layer_weights), axis=1) * learning_rate
         self.weights -= step_size_w.reshape(self.weights.shape)
+        step_size_b = np.sum(self.dSSRdb(dSSR, output_layer_weights), axis=1) * learning_rate
+        self.biases -= step_size_b.reshape(self.biases.shape)
 
 
 class output_layer:
@@ -73,18 +73,18 @@ class output_layer:
     def forward(self, inputs):
         self.X = np.dot(self.weights, inputs) + self.biases
         self.inputs = inputs
-        self.output = self.X
+        self.output = relu(self.X)
         return self.output
 
     def dSSRdw(self, dSSR):
         return dSSR * self.inputs
 
     def backward(self, dSSR, learning_rate):
-        step_size_b = np.sum(dSSR) * learning_rate
-        self.biases -= step_size_b
         # updating the weights of each neuron
         step_size_w = np.sum(self.dSSRdw(dSSR), axis=1) * learning_rate
         self.weights -= step_size_w
+        step_size_b = np.sum(dSSR) * learning_rate
+        self.biases -= step_size_b
         return self.weights
 
 
