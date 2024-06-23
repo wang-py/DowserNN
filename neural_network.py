@@ -145,7 +145,7 @@ if __name__ == "__main__":
 
     nn = NeuralNetwork(input_size, num_of_data, hidden_size, output_size)
 
-    nn.train(inputs.reshape([input_size, num_of_data]), y, epochs=5000)
+    nn.train(inputs.reshape([input_size, num_of_data]), y, epochs=500)
 
     outputs = nn.forward(inputs.reshape([input_size, num_of_data]))
     print("shape of outputs:", outputs.shape)
@@ -158,16 +158,15 @@ if __name__ == "__main__":
     print("validation inputs:\n", validation_inputs)
     print("validation outputs:\n", validation_outputs)
     print("trained output with test input:\n", predicted_outputs)
-    fig, ax = plt.subplots(4, 1, figsize=(12, 15))
-    ax[0].scatter(inputs, y)
-    ax[0].set_xlabel("original function")
+    fig, ax = plt.subplots(2, 1, figsize=(12, 10))
+    ax[0].scatter(inputs, y, label="original function", color='b')
+    ax[0].scatter(inputs, outputs.flatten(), label="trained function", color='r')
+    ax[0].legend()
 
-    ax[1].scatter(inputs, outputs.flatten())
-    ax[1].set_xlabel("trained function")
+    ax[1].scatter(validation_inputs, validation_outputs, color='b',
+                  label="original function using different input")
+    ax[1].scatter(validation_inputs, predicted_outputs, color='r',
+                  label="trained function using different input")
+    ax[1].legend()
 
-    ax[2].scatter(validation_inputs, validation_outputs)
-    ax[2].set_xlabel("original function using different input")
-
-    ax[3].scatter(validation_inputs, predicted_outputs)
-    ax[3].set_xlabel("trained function using different input")
     plt.show()
