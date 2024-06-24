@@ -33,12 +33,12 @@ def generate_input(input_dim, output_dim, num_of_data):
 
 
 def softmax(Z):
-    return np.exp(Z) / np.sum(np.exp(Z))
+    return np.exp(Z) / np.sum(np.exp(Z), axis=0)
 
 
 def forward(W1, b1, W2, b2, X):
     Z1 = W1.dot(X) + b1
-    A1 = relu(Z1)
+    A1 = sigmoid(Z1)
     Z2 = W2.dot(A1) + b2
     A2 = relu(Z2)
 
@@ -50,9 +50,9 @@ def calculate_gradient(Z1, A1, Z2, A2, W2, X, dSSR):
     dSSRdW2 = dSSR.dot(A1.T)
     dW2 = dSSRdW2 / N
     db2 = np.sum(dSSR, axis=1) / N
-    dSSRdW1 = (W2.T.dot(dSSR) * relu_derivative(Z1)).dot(X.T)
+    dSSRdW1 = (W2.T.dot(dSSR) * sigmoid_derivative(Z1)).dot(X.T)
     dW1 = dSSRdW1 / N
-    dSSRdb1 = W2.T.dot(dSSR) * relu_derivative(Z1)
+    dSSRdb1 = W2.T.dot(dSSR) * sigmoid_derivative(Z1)
     db1 = np.sum(dSSRdb1, axis=1) / N
 
     return dW1, db1, dW2, db2
@@ -100,7 +100,7 @@ if __name__ == "__main__":
     output_size = 1
 
     # Size of hidden layer
-    hidden_size = 2
+    hidden_size = 100
 
     # Number of data
     num_of_data = 10
@@ -114,25 +114,24 @@ if __name__ == "__main__":
     W2 = np.random.rand(hidden_size, hidden_size) / np.sqrt(hidden_size)
     b2 = np.zeros([hidden_size, 1])
 
-    W3 = np.random.rand(output_size, hidden_size) / np.sqrt(hidden_size)
-    b3 = np.zeros([output_size, 1])
-
     y = our_function(inputs)
     inputs_reshaped = inputs.reshape([input_dim, num_of_data])
     y_reshaped = y.reshape([input_dim, num_of_data])
     W1, b1, W2, b2, A2 = train(W1, b1, W2, b2,
                                inputs_reshaped,
                                y_reshaped,
-                               step_size=0.001, iters=3000)
+                               step_size=0.001, iters=2000)
 
     # test output
     test_X = np.random.rand(num_of_data * input_dim)
     y = our_function(test_X)
     A2 = forward(W1, b1, W2, b2, inputs.reshape([input_dim, num_of_data]))[3]
+    A2 = np.mean(A2, axis=0)
 
     validation_inputs = np.random.rand(num_of_data * input_dim)
     validation_outputs = our_function(validation_inputs)
     predicted_outputs = forward(W1, b1, W2, b2, validation_inputs.reshape([input_dim, num_of_data]))[3]
+    predicted_outputs = np.mean(predicted_outputs, axis=0)
     print("original inputs:\n", inputs)
     print("expected output:\n", y)
     print("trained output:\n", A2)
