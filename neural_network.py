@@ -45,9 +45,6 @@ class hidden_layer:
         self.inputs = inputs
         return self.output
 
-    def dSSR(observed, predicted):
-        return np.sum(-2 * (observed - predicted))
-
     def dSSRdw(self, dSSR_times_db, output_layer_weights):
         N = self.inputs.shape[0]
         dSSRdw = (output_layer_weights.T.dot(dSSR_times_db) *
@@ -56,7 +53,7 @@ class hidden_layer:
         return dSSRdw
 
     def dSSRdb(self, dSSR_times_db, output_layer_weights):
-        N = self.inputs.shape[0]
+        N = dSSR_times_db.shape[0]
         dSSRdb = output_layer_weights.T.dot(dSSR_times_db) * relu_derivative(self.X)
         dSSRdb = np.sum(dSSRdb, axis=1) / N
         return dSSRdb
@@ -87,7 +84,7 @@ class output_layer:
         return dSSR.dot(self.inputs.T)
 
     def backward(self, dSSR, learning_rate):
-        N = inputs.shape[0]
+        N = dSSR.shape[1]
         # updating the weights of each neuron
         step_size_w = self.dSSRdw(dSSR) / N * learning_rate
         # print(f"step_size_w:{step_size_w}")
@@ -133,16 +130,16 @@ class NeuralNetwork:
 
 if __name__ == "__main__":
     # Number of inputs
-    input_size = 2
+    input_size = 1
 
     # Output size
     output_size = 1
 
     # Size of hidden layer
-    hidden_size = 2
+    hidden_size = 4
 
     # Number of data
-    num_of_data = 10
+    num_of_data = 20
 
     # Generate random input data
     inputs = np.random.rand(num_of_data * input_size)
@@ -154,7 +151,7 @@ if __name__ == "__main__":
     nn = NeuralNetwork(input_size, num_of_data, hidden_size, output_size)
 
     nn.train(inputs.reshape([input_size, num_of_data]), y,
-             learning_rate=0.01, epochs=10000)
+             learning_rate=0.001, epochs=10000)
 
     outputs = nn.forward(inputs.reshape([input_size, num_of_data]))
     print("shape of outputs:", outputs.shape)
