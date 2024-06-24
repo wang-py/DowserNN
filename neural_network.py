@@ -30,7 +30,7 @@ def softmax(xi, xj):
     return np.exp(xi) / np.sum(np.exp(xj))
 
 
-class input_layer:
+class hidden_layer:
     def __init__(self, hidden_size, input_dim):
         # weights are randomly assigned
         self.weights = np.random.rand(hidden_size, input_dim) / np.sqrt(input_dim)
@@ -67,7 +67,7 @@ class input_layer:
         self.biases -= step_size_b.reshape(-1, 1)
 
 
-class hidden_layer:
+class output_layer:
     def __init__(self, hidden_size, output_size):
         self.weights = np.random.rand(hidden_size, hidden_size) / np.sqrt(hidden_size)
         self.biases = np.zeros([hidden_size, 1])
@@ -95,46 +95,16 @@ class hidden_layer:
         return self.weights
 
 
-class output_layer:
-    def __init__(self, hidden_size, output_size):
-        self.weights = np.random.rand(hidden_size, output_size) / np.sqrt(output_size)
-        self.biases = np.zeros([output_size, 1])
-        print("output layer weights: ", self.weights)
-        print("output layer biases: ", self.biases)
-
-    def forward(self, inputs):
-        self.X = np.dot(self.weights, inputs) + self.biases
-        self.inputs = inputs
-        self.output = relu(self.X)
-        return self.output
-
-    def dSSRdw(self, dSSR):
-        return dSSR.dot(self.inputs.T)
-
-    def backward(self, dSSR, learning_rate):
-        N = dSSR.shape[1]
-        # updating the weights of each neuron
-        step_size_w = self.dSSRdw(dSSR) / N * learning_rate
-        # print(f"step_size_w:{step_size_w}")
-        self.weights -= step_size_w
-        step_size_b = np.sum(dSSR, axis=1) / N * learning_rate
-        # print(f"step_size_b:{step_size_b}")
-        self.biases -= step_size_b.reshape(-1, 1)
-        return self.weights
-
-
 # Define the NeuralNetwork class
 class NeuralNetwork:
     def __init__(self, input_size, num_of_data, hidden_size, output_size):
-        self.input_layer = input_layer(hidden_size, input_size)
-        self.hidden_layer = hidden_layer(hidden_size, hidden_size)
-        # self.output_layer = output_layer(output_size, hidden_size)
+        self.hidden_layer = hidden_layer(hidden_size, input_size)
+        self.output_layer = output_layer(hidden_size, hidden_size)
 
     def forward(self, inputs):
-        input_layer_output = self.input_layer.forward(inputs)
-        hidden_layer_output = self.hidden_layer.forward(input_layer_output)
-        # output_layer_output = self.output_layer2.forward(hidden_layer_output)
-        return hidden_layer_output
+        hidden_layer_output = self.hidden_layer.forward(inputs)
+        output_layer_output = self.output_layer.forward(hidden_layer_output)
+        return output_layer_output
 
     def dSSR(self, expected, predicted):
         return -2 * (expected - predicted)
@@ -146,11 +116,11 @@ class NeuralNetwork:
 
             # Backward pass
             dSSR = self.dSSR(expected_output, predicted_output)
-            hidden_layer_weights = self.hidden_layer.backward(
+            output_layer_weights = self.output_layer.backward(
                     dSSR, learning_rate
                     )
-            self.input_layer.backward(dSSR,
-                                      hidden_layer_weights, learning_rate)
+            self.hidden_layer.backward(dSSR,
+                                       output_layer_weights, learning_rate)
 
             # Calculate loss
             loss = np.mean((expected_output - predicted_output) ** 2)
@@ -160,7 +130,7 @@ class NeuralNetwork:
 
 if __name__ == "__main__":
     # Number of inputs
-    input_size = 1
+    input_size = 4
 
     # Output size
     output_size = 1
