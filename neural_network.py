@@ -108,7 +108,7 @@ if __name__ == "__main__":
     hidden_size = 200
 
     # Number of data
-    num_of_data = 1000
+    num_of_data = 100
 
     # Generate random input data
     inputs = np.random.rand(input_dim * num_of_data) - 0.5
@@ -125,7 +125,7 @@ if __name__ == "__main__":
     W1, b1, W2, b2, A2 = train(W1, b1, W2, b2,
                                inputs_reshaped,
                                y_reshaped,
-                               step_size=0.01, iters=5000)
+                               step_size=0.01, iters=50000)
 
     # test output
     A2 = forward(W1, b1, W2, b2, inputs.reshape([input_dim, num_of_data]))[3]
