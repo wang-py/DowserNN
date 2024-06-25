@@ -40,20 +40,20 @@ class hidden_layer:
         print("hidden layer biases: ", self.biases)
 
     def forward(self, inputs):
-        self.X = np.dot(self.weights, inputs) + self.biases
+        self.X = self.weights.dot(inputs) + self.biases
         self.output = relu(self.X)
         self.inputs = inputs
         return self.output
 
     def dSSRdw(self, dSSR_times_db, output_layer_weights):
-        N = self.inputs.shape[0]
+        N = dSSR_times_db.shape[1]
         dSSRdw = (output_layer_weights.T.dot(dSSR_times_db) *
                   relu_derivative(self.X)).dot(self.inputs.T)
         dSSRdw /= N
         return dSSRdw
 
     def dSSRdb(self, dSSR_times_db, output_layer_weights):
-        N = dSSR_times_db.shape[0]
+        N = dSSR_times_db.shape[1]
         dSSRdb = output_layer_weights.T.dot(dSSR_times_db) * relu_derivative(self.X)
         dSSRdb = np.sum(dSSRdb, axis=1) / N
         return dSSRdb
@@ -69,13 +69,13 @@ class hidden_layer:
 
 class output_layer:
     def __init__(self, hidden_size, output_size):
-        self.weights = np.random.rand(hidden_size, hidden_size) / np.sqrt(hidden_size)
-        self.biases = np.zeros([hidden_size, 1])
+        self.weights = np.random.rand(output_size, hidden_size) / np.sqrt(hidden_size)
+        self.biases = np.zeros([output_size, 1])
         print("output layer weights: ", self.weights)
         print("output layer biases: ", self.biases)
 
     def forward(self, inputs):
-        self.X = np.dot(self.weights, inputs) + self.biases
+        self.X = self.weights.dot(inputs) + self.biases
         self.inputs = inputs
         self.output = relu(self.X)
         return self.output
@@ -99,7 +99,7 @@ class output_layer:
 class NeuralNetwork:
     def __init__(self, input_size, num_of_data, hidden_size, output_size):
         self.hidden_layer = hidden_layer(hidden_size, input_size)
-        self.output_layer = output_layer(hidden_size, hidden_size)
+        self.output_layer = output_layer(hidden_size, output_size)
 
     def forward(self, inputs):
         hidden_layer_output = self.hidden_layer.forward(inputs)
@@ -130,32 +130,32 @@ class NeuralNetwork:
 
 if __name__ == "__main__":
     # Number of inputs
-    input_size = 4
+    input_size = 1
 
     # Output size
     output_size = 1
 
     # Size of hidden layer
-    hidden_size = 4
+    hidden_size = 100
 
     # Number of data
-    num_of_data = 20
+    num_of_data = 100
 
     # Generate random input data
-    inputs = np.random.rand(num_of_data * input_size)
+    inputs = np.random.rand(num_of_data * input_size) - 0.5
 
     # test output
     # y = np.random.rand(num_of_data)
-    y = our_function(inputs).reshape([input_size, num_of_data])
+    y = our_function(inputs)
 
     nn = NeuralNetwork(input_size, num_of_data, hidden_size, output_size)
 
     nn.train(inputs.reshape([input_size, num_of_data]), y,
-             learning_rate=0.001, epochs=10000)
+             learning_rate=0.02, epochs=10000)
 
     outputs = nn.forward(inputs.reshape([input_size, num_of_data]))
     print("shape of outputs:", outputs.shape)
-    validation_inputs = np.random.rand(num_of_data * input_size)
+    validation_inputs = np.random.rand(num_of_data * input_size) - 0.5
     validation_outputs = our_function(validation_inputs)
     predicted_outputs = nn.forward(validation_inputs.reshape([input_size, num_of_data]))
     print("original inputs:\n", inputs)
