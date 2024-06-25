@@ -105,7 +105,7 @@ if __name__ == "__main__":
     output_size = 1
 
     # Size of hidden layer
-    hidden_size = 200
+    hidden_size = 128
 
     # Number of data
     num_of_data = 100

@@ -8,24 +8,24 @@ import matplotlib.pyplot as plt
 # Generate training data
 def generate_data(num_samples):
     X = np.random.uniform(-10, 10, num_samples)
-    y = X ** 3 + X ** 2 + 10
+    y = X ** 3 + 2 * X ** 2 + 10
     return X, y
 
 
 # Generate training and validation data
 train_X, train_y = generate_data(1000)
-val_X, val_y = generate_data(200)
+val_X, val_y = generate_data(100)
 
 # Create a neural network model
 model = Sequential()
-model.add(Dense(100, input_dim=1, activation='relu', kernel_initializer='he_normal'))
+model.add(Dense(128, input_dim=1, activation='relu', kernel_initializer='he_normal'))
 model.add(Dense(1, activation='linear'))
 
 # Compile the model
 model.compile(optimizer=Adam(learning_rate=0.01), loss='mean_squared_error')
 
 # Train the model
-history = model.fit(train_X, train_y, epochs=200, batch_size=32, validation_data=(val_X, val_y))
+history = model.fit(train_X, train_y, epochs=800, batch_size=32)
 
 # Generate new input data for prediction
 new_inputs = np.random.uniform(-10, 10, 100).reshape(-1, 1)
@@ -45,10 +45,9 @@ plt.figure(figsize=(12, 6))
 # Plot training loss
 plt.subplot(1, 2, 1)
 plt.plot(history.history['loss'], label='Training Loss')
-plt.plot(history.history['val_loss'], label='Validation Loss')
 plt.xlabel('Epoch')
 plt.ylabel('Loss')
-plt.title('Training and Validation Loss')
+plt.title('Training Loss')
 plt.legend()
 
 # Plot expected vs predicted outputs
@@ -62,7 +61,3 @@ plt.legend()
 
 plt.tight_layout()
 plt.show()
-
-# Print the new inputs and the predicted outputs
-print("New Inputs: ", new_inputs.flatten())
-print("Predicted Outputs: ", new_outputs.flatten())
