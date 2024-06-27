@@ -4,12 +4,15 @@ import numpy as np
 
 
 def get_data_from_csv(csv_files):
-    data = np.zeros([len(csv_files), 80])
+    X = np.zeros([len(csv_files), 80])
+    y = np.zeros(len(csv_files))
     for i in range(len(csv_files)):
         csv_data = np.genfromtxt(csv_files[i], delimiter=',')
-        data[i] = csv_data[1:3, :].flatten()
+        X[i] = csv_data[3:5, :].flatten()
+        if csv_files[i].endswith('_1.csv'):
+            y[i] = 1
 
-    return data
+    return X, y
 
 
 if __name__ == '__main__':
@@ -22,5 +25,7 @@ if __name__ == '__main__':
                 csv_files.append(file)
     print(csv_files)
 
-    data = get_data_from_csv(csv_files)
+    X, y = get_data_from_csv(csv_files)
+    np.save(input_folder + "/X.npy", X)
+    np.save(input_folder + "/y.npy", y)
     pass
