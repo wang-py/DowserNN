@@ -60,7 +60,7 @@ def calculate_gradient_SSR(Z1, A1, Z2, A2, W2, X, dSSR):
 
 def calculate_gradient_CE(Z1, A1, Z2, A2, W2, X, delta):
     N = X.shape[1]
-    dCEdW2 = delta.dot(A1.T)
+    dCEdW2 = 2 * delta.dot(A1.T)
     dW2 = dCEdW2 / N
     db2 = np.sum(delta, axis=1) / N
     dCEdW1 = W2.T.dot(delta) * relu_derivative(Z1)
