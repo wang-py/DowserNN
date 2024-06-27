@@ -63,8 +63,8 @@ def calculate_gradient_CE(Z1, A1, Z2, A2, W2, X, delta):
     dCEdW2 = delta.dot(A1.T)
     dW2 = dCEdW2 / N
     db2 = np.sum(delta, axis=1) / N
-    dCEdW1 = (W2.T.dot(delta) * relu_derivative(Z1)).dot(X.T)
-    dW1 = dCEdW1 / N
+    dCEdW1 = W2.T.dot(delta) * relu_derivative(Z1)
+    dW1 = dCEdW1.dot(X.T) / N
     dCEdb1 = np.sum(dCEdW1)
     db1 = dCEdb1 / N
 
