@@ -45,7 +45,7 @@ def forward(W1, b1, W2, b2, X):
     return Z1, A1, Z2, A2
 
 
-def calculate_gradient(Z1, A1, Z2, A2, W2, X, dSSR):
+def calculate_gradient_SSR(Z1, A1, Z2, A2, W2, X, dSSR):
     N = X.shape[1]
     dSSRdW2 = dSSR.dot(A1.T)
     dW2 = dSSRdW2 / N
@@ -54,6 +54,19 @@ def calculate_gradient(Z1, A1, Z2, A2, W2, X, dSSR):
     dW1 = dSSRdW1 / N
     dSSRdb1 = W2.T.dot(dSSR) * relu_derivative(Z1)
     db1 = np.sum(dSSRdb1, axis=1) / N
+
+    return dW1, db1, dW2, db2
+
+
+def calculate_gradient_CE(Z1, A1, Z2, A2, W2, X, cross_entropy):
+    N = X.shape[1]
+    dCEdW2 = cross_entropy.dot(A1.T)
+    dW2 = dCEdW2 / N
+    db2 = cross_entropy - np.array([1, 0])
+    dCEdW1 = 
+    dW1 = dCEdW1 / N
+    dCEdb1 = 
+    db1 = 
 
     return dW1, db1, dW2, db2
 
@@ -75,8 +88,12 @@ def get_SSR(expected, predicted):
     return np.sum(np.square(expected - predicted))
 
 
-def get_cross_entropy(A2):
+def get_total_cross_entropy(A2):
     return np.sum(-np.log(A2))
+
+
+def get_cross_entropy(A2):
+    return np.sum(-np.log(A2), axis=0)
 
 
 def train(W1, b1, W2, b2, X, y, step_size, iters):
@@ -86,14 +103,14 @@ def train(W1, b1, W2, b2, X, y, step_size, iters):
         # argmax_index = np.argmax(A2)
         # output = A2[argmax_index]
         # print(f"argmax_index: {argmax_index}")
-        cross_entropy = get_cross_entropy(A2)
+        total_cross_entropy = get_total_cross_entropy(A2)
         SSR = get_SSR(y, A2)
         if i % 100 == 0:
-            print(f"cross entropy at {i}: {cross_entropy}")
+            print(f"cross entropy at {i}: {total_cross_entropy}")
             print(f"SSR at {i}: {SSR}")
         dSSR = get_dSSR(y, A2)
         # print(f"dSSR: {dSSR}")
-        dW1, db1, dW2, db2 = calculate_gradient(Z1, A1, Z2, A2, W2, X, dSSR)
+        dW1, db1, dW2, db2 = calculate_gradient_SSR(Z1, A1, Z2, A2, W2, X, dSSR)
         # print(f"dW1: {dW1} db1: {db1} dW2: {dW2} db1: {db2}")
         W1, b2, W2, b2 = gradient_descent(W1, b1, W2, b2, dW1, db1, dW2, db2,
                                           step_size)
