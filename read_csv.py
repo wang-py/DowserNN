@@ -5,12 +5,14 @@ import numpy as np
 
 def get_data_from_csv(csv_files):
     X = np.zeros([len(csv_files), 80])
-    y = np.zeros(len(csv_files))
+    y = np.zeros([len(csv_files), 2])
     for i in range(len(csv_files)):
         csv_data = np.genfromtxt(csv_files[i], delimiter=',')
         X[i] = csv_data[3:5, :].flatten()
         if csv_files[i].endswith('_1.csv'):
-            y[i] = 1
+            y[i, 0] = 1
+        else:
+            y[i, 1] = 1
 
     return X, y
 
