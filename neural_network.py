@@ -133,8 +133,10 @@ def output(argmax_vec, A2):
 
 
 if __name__ == "__main__":
+    X = np.load("test_data/X.npy").T
+    y = np.load("test_data/y.npy").T
     # Number of inputs
-    input_dim = 80
+    input_dim = X.shape[0]
 
     # Output size
     output_size = 2
@@ -142,11 +144,14 @@ if __name__ == "__main__":
     # Size of hidden layer
     hidden_size = 80
 
+    # training iterations
+    iters = 10000
+
     # Number of data
-    num_of_data = 6
+    # num_of_data = 6
 
     # Generate random input data
-    inputs = np.random.rand(input_dim * num_of_data) - 0.5
+    # inputs = np.random.rand(input_dim * num_of_data) - 0.5
     # initialilze weights
     W1 = np.random.rand(hidden_size, input_dim) / np.sqrt(input_dim)
     b1 = np.zeros([hidden_size, 1])
@@ -154,17 +159,17 @@ if __name__ == "__main__":
     W2 = np.random.rand(output_size, hidden_size) / np.sqrt(hidden_size)
     b2 = np.zeros([output_size, 1])
 
-    y = np.array([[0, 1], [0, 1], [1, 0], [1, 0], [1, 0], [1, 0]]).T
-    inputs_reshaped = inputs.reshape([input_dim, num_of_data])
-    y_reshaped = y.reshape([-1, 1])
+    # y = np.array([[0, 1], [0, 1], [1, 0], [1, 0], [1, 0], [1, 0]]).T
+    # inputs_reshaped = inputs.reshape([input_dim, num_of_data])
+    # y_reshaped = y.reshape([-1, 1])
     np.set_printoptions(precision=3, suppress=True)
     W1, b1, W2, b2, A2, loss, cross_entropy = train(W1, b1, W2, b2,
-                                                    inputs_reshaped, y,
+                                                    X, y,
                                                     step_size=0.01,
-                                                    iters=10000)
+                                                    iters=iters)
 
     # test output
-    A2 = forward(W1, b1, W2, b2, inputs.reshape([input_dim, num_of_data]))[3]
+    A2 = forward(W1, b1, W2, b2, X)[3]
     # print(f"original inputs: {inputs}")
     print(f"expected output:\n{y}")
     print(f"trained output:\n{A2}")
@@ -179,8 +184,8 @@ if __name__ == "__main__":
     # print("validation outputs:\n", validation_outputs)
     # print("trained output with test input:\n", predicted_outputs)
     fig, ax = plt.subplots(figsize=(12, 8))
-    ax.plot(np.arange(10000), loss, label="loss function", color='b')
-    ax.plot(np.arange(10000), cross_entropy, label="cross entropy", color='r')
+    ax.plot(np.arange(iters), loss, label="loss function", color='b')
+    ax.plot(np.arange(iters), cross_entropy, label="cross entropy", color='r')
     ax.legend()
 
     # ax[1].scatter(validation_inputs, validation_outputs, color='b',
