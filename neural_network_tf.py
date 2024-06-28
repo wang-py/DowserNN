@@ -33,7 +33,10 @@ if __name__ == "__main__":
     model.summary()
     # Train the model
     history = model.fit(X, y, epochs=80, batch_size=32)
-    print(history.history.keys())
+    y_predicted = model.predict(X_data)
+    np.set_printoptions(precision=4, suppress=True)
+    print("expected output:\n", y)
+    print("predicted output:\n", y_predicted)
 
     # Generate new input data for prediction
 
