@@ -89,11 +89,11 @@ def get_SSR(expected, predicted):
 
 
 def get_total_cross_entropy(A2):
-    return np.sum(-np.log(A2))
+    return -np.sum(np.log(A2)) / A2.shape[1]
 
 
 def get_cross_entropy(A2):
-    return np.sum(-np.log(A2), axis=0)
+    return -np.sum(np.log(A2), axis=0)
 
 
 def get_delta(y, A2):
@@ -145,7 +145,7 @@ if __name__ == "__main__":
     hidden_size = 80
 
     # training iterations
-    iters = 10000
+    iters = 5000
 
     # Number of data
     # num_of_data = 6
