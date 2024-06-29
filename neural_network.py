@@ -88,8 +88,8 @@ def get_SSR(expected, predicted):
     return np.sum(np.square(expected - predicted))
 
 
-def get_total_cross_entropy(A2):
-    return -np.sum(np.log(A2)) / A2.shape[1]
+def get_total_cross_entropy(y, A2):
+    return -np.sum(y * np.log(A2)) / A2.shape[1]
 
 
 def get_cross_entropy(A2):
@@ -109,7 +109,7 @@ def train(W1, b1, W2, b2, X, y, step_size, iters):
         # argmax_index = np.argmax(A2)
         # output = A2[argmax_index]
         # print(f"argmax_index: {argmax_index}")
-        total_cross_entropy = get_total_cross_entropy(A2)
+        total_cross_entropy = get_total_cross_entropy(y, A2)
         delta = get_delta(y, A2)
         SSR = get_SSR(y, A2)
         loss[i] = SSR
