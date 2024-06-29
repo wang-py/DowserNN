@@ -109,14 +109,12 @@ def train(W1, b1, W2, b2, X, y, step_size, iters):
         # argmax_index = np.argmax(A2)
         # output = A2[argmax_index]
         # print(f"argmax_index: {argmax_index}")
-        total_cross_entropy = get_total_cross_entropy(y, A2)
         delta = get_delta(y, A2)
-        SSR = get_SSR(y, A2)
-        loss[i] = SSR
-        cross_entropy[i] = total_cross_entropy
+        loss[i] = get_SSR(y, A2)
+        cross_entropy[i] = get_total_cross_entropy(y, A2)
         if i % 100 == 0:
-            print(f"cross entropy at {i}: {total_cross_entropy}")
-            print(f"SSR at {i}: {SSR}")
+            print(f"cross entropy at {i}: {cross_entropy[i]}")
+            print(f"SSR at {i}: {loss[i]}")
         # dSSR = get_dSSR(y, A2)
         # print(f"dSSR: {dSSR}")
         dW1, db1, dW2, db2 = calculate_gradient_CE(Z1, A1, Z2, A2, W2, X, delta)
