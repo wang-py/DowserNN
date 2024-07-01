@@ -41,7 +41,7 @@ if __name__ == "__main__":
     # Generate new input data for prediction
 
     # Plot training loss
-    fig, ax = plt.subplots(figsize=(12, 10))
+    fig, ax = plt.subplots(figsize=(8, 6))
     ax.plot(history.history['loss'], label='cross entropy')
     ax.set_xlabel('Epoch')
     ax.set_ylabel('Loss')
