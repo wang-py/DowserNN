@@ -26,11 +26,13 @@ def feature_encoder(feature_number):
 
 def read_pdb(input_pdb):
     # read in the pdb file
-    tunnel_points = []
     pdb_file = open(input_pdb)
     atom_info = [line for line in pdb_file.readlines()
                  if line.startswith('ATOM  ') or line.startswith('HETATM')]
+    data = np.zeros((len(atom_info), 7))
+    i = 0
     for line in atom_info:
+        one_data = np.array([])
         xyz = [float(x) for x in line[30:53].split()]
         # read in the atom name
         atom_type = str(line[12:15]).strip()
@@ -41,14 +43,21 @@ def read_pdb(input_pdb):
         except KeyError as err:
             atom_types.setdefault(atom_type, 6)
             residue_types.setdefault(residue_type, 22)
+            atom_encode = feature_encoder(atom_types[atom_type])
+            residue_encode = feature_encoder(residue_types[residue_type])
 
-        tunnel_points.append(xyz)
+        one_data = np.append(one_data, atom_encode)
+        one_data = np.append(one_data, residue_encode)
+        one_data = np.append(one_data, xyz)
+        data[i] = one_data
+        i += 1
 
-    return np.array(tunnel_points)
+    return data
 
 
 if __name__ == '__main__':
     input_pdb = sys.argv[1]
-    read_pdb(input_pdb)
+    data = read_pdb(input_pdb)
+    print(data)
 
     pass
