@@ -143,7 +143,7 @@ if __name__ == "__main__":
     hidden_size = 80
 
     # training iterations
-    iters = 5000
+    iters = 1000
 
     # Number of data
     # num_of_data = 6
