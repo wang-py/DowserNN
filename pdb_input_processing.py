@@ -37,35 +37,54 @@ def find_distances(water_coor, atoms_coords):
     return dist
 
 
-def find_nth_closest_atoms(waters, atoms, n):
+def find_nth_closest_atoms(water, atoms, n):
     """
     find n closest atoms near any water
     ----------------------------------------------------------------------------
-    waters: ndrray N x 3
-    Array of water coordinates
+    water: ndrray 1 x 7
+    Array of water information
 
-    atoms: ndarray N x 3
-    Array of protein atom coordinates
+    atoms: ndarray N x 7
+    Array of other atoms' information
 
     n: int
     Number of closest atoms
     ----------------------------------------------------------------------------
     Returns:
-    nth_min_distances: N x 1
-    nth minimum distances from N water molecules
+    n_nearest_atoms: n x 7
+    reformatted information from n nearest water molecules
     """
-    water_coors = np.array([np.fromiter(water.values(), dtype=float)[0:3] for
-                            water in waters])
-    water_coors = water_coors.astype(float)
-    atoms_coords = np.array([np.fromiter(atom.values(), dtype=float) for
-                             atom in atoms])
-    n_min_distances = []
-    for water_coor in water_coors:
-        dist = find_distances(water_coor, atoms_coords)
-        sorted_dist = np.sort(dist)
-        n_min_distances.append(sorted_dist[:n])
 
-    return n_min_distances
+    dist = find_distances(water[-3:], atoms[:, -3:])
+    atoms_with_dist = np.append(atoms, dist, axis=1)
+    atoms_sorted = atoms_with_dist[atoms_with_dist[:, -1].argsort()]
+    n_nearest_atoms = atoms_sorted[:n]
+
+    return n_nearest_atoms
+
+
+def generate_training_yes_X(waters, atoms, n):
+    """
+    Generate training X data with yes cases for neural network
+    ----------------------------------------------------------------------------
+    waters: ndrray W x 7
+    Array of water information
+
+    atoms: ndarray N x 7
+    Array of other atoms' information
+
+    n: int
+    Number of closest atoms
+    ----------------------------------------------------------------------------
+    Returns:
+    training_X: W x n x 7
+    training X data
+    """
+    pass
+
+
+def generate_training_yes_y():
+    pass
 
 
 def feature_encoder_atom(feature_number):
@@ -132,5 +151,6 @@ def read_pdb(input_pdb):
 if __name__ == '__main__':
     input_pdb = sys.argv[1]
     water_data, protein_data = read_pdb(input_pdb)
+    total_data = np.append(water_data, protein_data, axis=0)
 
     pass
