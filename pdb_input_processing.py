@@ -104,18 +104,18 @@ def generate_training_yes_X(waters, atoms, n):
     Number of closest atoms
     ----------------------------------------------------------------------------
     Returns:
-    training_X: 7 x n x W
+    training_X: W x n x 7
     training X data
     """
     W = waters.shape[0]
-    training_X = np.zeros([7 * n, W])
+    training_X = np.zeros([W, 7 * n])
     for i in range(W):
         n_nearest_atoms = find_n_nearest_atoms(waters[i], atoms, n)
         internal_coords = get_internal_coords(
                 n_nearest_atoms[:, -4:-1] - waters[i, -3:])
         one_training_X = np.append(n_nearest_atoms[:, 0:4],
                                    internal_coords, axis=1)
-        training_X[:, i] = one_training_X.flatten()
+        training_X[i] = one_training_X.flatten()
 
     return training_X
 
