@@ -12,6 +12,7 @@ atom_types = {'C': 1, 'N': 2, 'O': 3, 'S': 4, 'H': 5, 'Others': 6}
 
 def get_internal_coords(data):
 
+
     pass
 
 
@@ -30,37 +31,41 @@ def find_distances(water_coor, atoms_coords):
     dist: N x 1
     distances between given water and N prtein atoms
     """
-    delta = water_coor - atoms_coords
+    delta = atoms_coords - water_coor
     delta_sq = np.square(delta)
     dist = np.sqrt(np.sum(delta_sq, axis=1))
 
     return dist
 
 
-def find_nth_closest_atoms(water, atoms, n):
+def find_n_closest_atoms(water, atoms, n):
     """
     find n closest atoms near any water
     ----------------------------------------------------------------------------
     water: ndrray 1 x 7
+    |A|A|R|R|X|Y|Z|
     Array of water information
 
     atoms: ndarray N x 7
+    |A|A|R|R|X|Y|Z|
     Array of other atoms' information
 
     n: int
     Number of closest atoms
     ----------------------------------------------------------------------------
     Returns:
-    n_nearest_atoms: n x 7
+    n_nearest_atoms_relative_xyz: n x 8
+    |A|A|R|R|r|r|r|d|
     reformatted information from n nearest water molecules
     """
 
     dist = find_distances(water[-3:], atoms[:, -3:])
-    atoms_with_dist = np.append(atoms, dist, axis=1)
+    atoms_with_dist = np.append(atoms, dist[:, np.newaxis], axis=1)
     atoms_sorted = atoms_with_dist[atoms_with_dist[:, -1].argsort()]
-    n_nearest_atoms = atoms_sorted[:n]
+    n_nearest_atoms = atoms_sorted[1:n + 1]
+    n_nearest_atoms_relative_xyz = n_nearest_atoms[:, -4:-1] - water[-3:]
 
-    return n_nearest_atoms
+    return n_nearest_atoms_relative_xyz
 
 
 def generate_training_yes_X(waters, atoms, n):
@@ -77,10 +82,15 @@ def generate_training_yes_X(waters, atoms, n):
     Number of closest atoms
     ----------------------------------------------------------------------------
     Returns:
-    training_X: W x n x 7
+    training_X: 7 x n x W
     training X data
     """
-    pass
+    W = waters.shape[0]
+    training_X = np.zeros([7 * n, W])
+    for i in range(W):
+        n_closet_atoms = find_n_closest_atoms(waters[i], atoms, n)
+
+    return training_X
 
 
 def generate_training_yes_y():
@@ -152,5 +162,6 @@ if __name__ == '__main__':
     input_pdb = sys.argv[1]
     water_data, protein_data = read_pdb(input_pdb)
     total_data = np.append(water_data, protein_data, axis=0)
+    training_X = generate_training_yes_X(water_data, total_data, n=10)
 
     pass
