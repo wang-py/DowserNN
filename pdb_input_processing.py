@@ -10,17 +10,40 @@ residue_types = {'ALA': 1, 'ARG': 2, 'ASP': 3, 'ASN': 4, 'CYS': 5, 'GLU': 6,
 atom_types = {'C': 1, 'N': 2, 'O': 3, 'S': 4, 'H': 5, 'Others': 6}
 
 
-def get_internal_coords(data):
+def get_internal_coords(relative_coors):
+    """
+    calculate internal coordinates based on relative vectors
+    ----------------------------------------------------------------------------
+    relative_coors: ndarray N x 3
+    Array of relative coordinates from water to any other atom
+    ----------------------------------------------------------------------------
+    Returns:
+    internal_coords: ndarray N x 3
+    internal coordinates based on relative positions
+    """
+    N = relative_coors.shape[0]
+    internal_coords = np.zeros([N, 3])
+    r1 = relative_coors[0, :]
+    r2 = relative_coors[1, :]
+    internal_coords[0] = np.array([r1.dot(r1.T), 0, 0])
+    internal_coords[1] = np.array([r2.dot(r2.T), r2.dot(r1.T), 0])
 
+    for i in range(2, N):
+        r_a = relative_coors[i]
+        r_b = relative_coors[i - 1]
+        r_c = relative_coors[i - 2]
+        internal_coords[i] = np.array([r_a.dot(r_a.T),
+                                       r_a.dot(r_b.T),
+                                       r_a.dot(r_c.T)])
 
-    pass
+    return internal_coords
 
 
 def find_distances(water_coor, atoms_coords):
     """
     find distances between one water and every other atoms
     ----------------------------------------------------------------------------
-    water_coor: ndrray 1 x 3
+    water_coor: ndarray 1 x 3
     Chosen water's coordinate
 
     atom_coords: ndarray N x 3
@@ -38,9 +61,9 @@ def find_distances(water_coor, atoms_coords):
     return dist
 
 
-def find_n_closest_atoms(water, atoms, n):
+def find_n_nearest_atoms(water, atoms, n):
     """
-    find n closest atoms near any water
+    find n nearest atoms near any water
     ----------------------------------------------------------------------------
     water: ndrray 1 x 7
     |A|A|R|R|X|Y|Z|
@@ -63,9 +86,8 @@ def find_n_closest_atoms(water, atoms, n):
     atoms_with_dist = np.append(atoms, dist[:, np.newaxis], axis=1)
     atoms_sorted = atoms_with_dist[atoms_with_dist[:, -1].argsort()]
     n_nearest_atoms = atoms_sorted[1:n + 1]
-    n_nearest_atoms_relative_xyz = n_nearest_atoms[:, -4:-1] - water[-3:]
 
-    return n_nearest_atoms_relative_xyz
+    return n_nearest_atoms
 
 
 def generate_training_yes_X(waters, atoms, n):
@@ -88,7 +110,12 @@ def generate_training_yes_X(waters, atoms, n):
     W = waters.shape[0]
     training_X = np.zeros([7 * n, W])
     for i in range(W):
-        n_closet_atoms = find_n_closest_atoms(waters[i], atoms, n)
+        n_nearest_atoms = find_n_nearest_atoms(waters[i], atoms, n)
+        internal_coords = get_internal_coords(
+                n_nearest_atoms[:, -4:-1] - waters[i, -3:])
+        one_training_X = np.append(n_nearest_atoms[:, 0:4],
+                                   internal_coords, axis=1)
+        training_X[:, i] = one_training_X.flatten()
 
     return training_X
 
