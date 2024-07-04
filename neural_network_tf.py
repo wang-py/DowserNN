@@ -7,10 +7,10 @@ import matplotlib.pyplot as plt
 
 if __name__ == "__main__":
     # Generate training and validation data
-    X = np.load("test_data/X.npy")
+    X = np.load("test_data/CI_X.npy")
     input_dim = X.shape[1]
     N = X.shape[0]
-    y = np.load("test_data/y.npy")
+    y = np.load("test_data/CI_y.npy")
 
     X_data = tf.convert_to_tensor(X)
     y_data = tf.convert_to_tensor(y)
@@ -32,7 +32,7 @@ if __name__ == "__main__":
 
     model.summary()
     # Train the model
-    history = model.fit(X_data, y_data, epochs=80, batch_size=32)
+    history = model.fit(X_data, y_data, epochs=40, batch_size=32)
     y_predicted = model.predict(X_data)
     np.set_printoptions(precision=4, suppress=True)
     print("expected output:\n", y)
