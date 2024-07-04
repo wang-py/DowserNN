@@ -92,7 +92,7 @@ def find_n_nearest_atoms(water, atoms, n):
 
 def generate_training_yes_X(waters, atoms, n):
     """
-    Generate training X data with yes cases for neural network
+    Generate X training data for yes cases for neural network
     ----------------------------------------------------------------------------
     waters: ndrray W x 7
     Array of water information
@@ -120,8 +120,22 @@ def generate_training_yes_X(waters, atoms, n):
     return training_X
 
 
-def generate_training_yes_y():
-    pass
+def generate_training_yes_y(W):
+    """
+    generate y training data for yes cases
+    ----------------------------------------------------------------------------
+    W: int
+    Number of water molecules or yes cases
+    ----------------------------------------------------------------------------
+    Returns:
+    training_y: ndarray: 2 x W
+    training y data
+    """
+    ones = np.ones(W)
+    zeros = np.zeros(W)
+    training_y = np.append(ones[:, np.newaxis], zeros[:, np.newaxis], axis=1)
+
+    return training_y
 
 
 def feature_encoder_atom(feature_number):
@@ -190,5 +204,8 @@ if __name__ == '__main__':
     water_data, protein_data = read_pdb(input_pdb)
     total_data = np.append(water_data, protein_data, axis=0)
     training_X = generate_training_yes_X(water_data, total_data, n=10)
+    training_y = generate_training_yes_y(water_data.shape[0])
+    np.save('test_data/CI_X.npy', training_X)
+    np.save('test_data/CI_y.npy', training_y)
 
     pass
