@@ -8,13 +8,16 @@ import matplotlib.pyplot as plt
 if __name__ == "__main__":
     # Generate training and validation data
     X = np.load("test_data/CI_X.npy")
-    input_dim = X.shape[1]
-    N = X.shape[0]
     y = np.load("test_data/CI_y.npy")
 
-    X_data = tf.convert_to_tensor(X)
-    y_data = tf.convert_to_tensor(y)
+    training_N = int(X.shape[0] / 2)
+    X_data = tf.convert_to_tensor(X[:training_N, :])
+    y_data = tf.convert_to_tensor(y[:training_N, :])
+    input_dim = X_data.shape[1]
+    N = X_data.shape[0]
 
+    X_test = tf.convert_to_tensor(X[training_N:, :])
+    y_test = tf.convert_to_tensor(y[training_N:, :])
     # Create a neural network model
     model = Sequential()
     model.add(
@@ -22,6 +25,7 @@ if __name__ == "__main__":
             80,
             activation="relu",
             kernel_initializer="he_normal",
+            bias_initializer='zeros'
         )
     )
     model.add(Dense(2, activation="softmax"))
@@ -35,10 +39,15 @@ if __name__ == "__main__":
     history = model.fit(X_data, y_data, epochs=40, batch_size=32)
     y_predicted = model.predict(X_data)
     np.set_printoptions(precision=4, suppress=True)
-    print("expected output:\n", y)
-    print("predicted output:\n", y_predicted)
+    # print("expected output:\n", y_data)
+    # print("predicted output:\n", y_predicted)
 
-    # Generate new input data for prediction
+    # test with new data
+    test_loss = model.evaluate(X_test, y_test)
+    # print("expected output:\n", y_test)
+    # print("predicted output:\n", y_validate)
+    # error_percent = np.sum(y_validate - y_test) / np.sum(y_test)
+    print(f"loss: {test_loss:.0%}")
 
     # Plot training loss
     fig, ax = plt.subplots(figsize=(8, 6))
