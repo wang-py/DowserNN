@@ -1,13 +1,13 @@
 import sys
-import os
+# import os
 import numpy as np
 
 residue_types = {'ALA': 1, 'ARG': 2, 'ASP': 3, 'ASN': 4, 'CYS': 5, 'GLU': 6,
                  'GLY': 7, 'HIS': 8, 'ILE': 9, 'LEU': 10, 'MET': 11, 'LYS': 12,
                  'PHE': 13, 'PRO': 14, 'SEC': 15, 'SER': 16, 'THR': 17,
-                 'TYR': 18, 'TRP': 19, 'VAL': 20, 'HOH': 21, 'OTHERS': 22}
+                 'TYR': 18, 'TRP': 19, 'VAL': 20, 'HOH': 21}  # , 'OTHERS': 22}
 
-atom_types = {'C': 1, 'N': 2, 'O': 3, 'S': 4, 'H': 5, 'Others': 6}
+atom_types = {'C': 1, 'N': 2, 'O': 3, 'S': 4, 'H': 5}  # , 'Others': 6}
 
 
 def get_internal_coords(relative_coors):
@@ -167,12 +167,23 @@ def feature_encoder_residue(feature_number):
 
 
 def read_pdb(input_pdb):
+    """
+    reads a pdb file and returns numpy array of water data and protein data
+    ----------------------------------------------------------------------------
+    input_pdb: str
+    path to pdb file
+    ----------------------------------------------------------------------------
+    Returns:
+    water_data, protein_data: ndarray: N x 7
+    """
     # read in the pdb file
     pdb_file = open(input_pdb)
     atom_info = [line for line in pdb_file.readlines()
                  if line.startswith('ATOM  ') or line.startswith('HETATM')]
     water_data = []
     protein_data = []
+    num_of_atom_types = len(atom_types.keys())
+    num_of_residue_types = len(residue_types.keys())
     for line in atom_info:
         one_data = np.array([])
         xyz = [float(x) for x in line[30:53].split()]
@@ -181,12 +192,18 @@ def read_pdb(input_pdb):
         res_type = str(line[17:20]).strip()
         try:
             atom_encode = feature_encoder_atom(atom_types[atom_type])
+        except KeyError:
+            num_of_atom_types += 1
+            atom_types[atom_type] = num_of_atom_types
+            atom_encode = feature_encoder_atom(atom_types[atom_type])
+            print("atom_types:", atom_types)
+        try:
             residue_encode = feature_encoder_residue(residue_types[res_type])
         except KeyError:
-            atom_types.setdefault(atom_type, 6)
-            residue_types.setdefault(res_type, 22)
-            atom_encode = feature_encoder_atom(atom_types[atom_type])
+            num_of_residue_types += 1
+            residue_types[res_type] = num_of_residue_types
             residue_encode = feature_encoder_residue(residue_types[res_type])
+            print("residue_types:", residue_types)
 
         one_data = np.append(one_data, atom_encode)
         one_data = np.append(one_data, residue_encode)
