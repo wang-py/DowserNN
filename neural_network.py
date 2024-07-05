@@ -131,8 +131,10 @@ def output(argmax_vec, A2):
 
 
 if __name__ == "__main__":
-    X = np.load("test_data/X.npy").T
-    y = np.load("test_data/y.npy").T
+    X = np.load("test_data/CI_X.npy").T
+    y = np.load("test_data/CI_y.npy").T
+    train_N = 200
+    test_N = X.shape[1] - train_N
     # Number of inputs
     input_dim = X.shape[0]
 
@@ -143,7 +145,7 @@ if __name__ == "__main__":
     hidden_size = 80
 
     # training iterations
-    iters = 1000
+    iters = 200
 
     # Number of data
     # num_of_data = 6
@@ -162,7 +164,7 @@ if __name__ == "__main__":
     # y_reshaped = y.reshape([-1, 1])
     np.set_printoptions(precision=3, suppress=True)
     W1, b1, W2, b2, A2, loss, cross_entropy = train(W1, b1, W2, b2,
-                                                    X, y,
+                                                    X[:, :train_N], y[:, :train_N],
                                                     step_size=0.01,
                                                     iters=iters)
 
@@ -172,15 +174,14 @@ if __name__ == "__main__":
     print(f"expected output:\n{y}")
     print(f"trained output:\n{A2}")
 
-    # validation_inputs = np.random.rand(num_of_data * input_dim) - 0.5
-    # validation_outputs = our_function(validation_inputs)
-    # predicted_outputs = forward(W1, b1, W2, b2, validation_inputs.reshape([input_dim, num_of_data]))[3]
-    # print("original inputs:\n", inputs_reshaped)
-    # print("expected output:\n", y)
-    # print("trained output:\n", A2)
-    # print("validation inputs:\n", validation_inputs)
+    test_inputs = X[:, train_N:]
+    test_outputs = y[:, train_N:]
+    test_predicted = forward(W1, b1, W2, b2, test_inputs)[3]
+    # print("test inputs:\n", validation_inputs)
     # print("validation outputs:\n", validation_outputs)
-    # print("trained output with test input:\n", predicted_outputs)
+    print("trained output with test input:\n", test_predicted)
+    error = np.mean(np.square(test_predicted - test_outputs))
+    print(f"error: {error}")
     fig, ax = plt.subplots(figsize=(12, 8))
     ax.plot(np.arange(iters), loss, label="loss function", color='b')
     ax.plot(np.arange(iters), cross_entropy, label="cross entropy", color='r')
