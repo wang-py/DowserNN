@@ -10,7 +10,7 @@ if __name__ == "__main__":
     X = np.load("test_data/CI_X.npy")
     y = np.load("test_data/CI_y.npy")
 
-    training_N = int(X.shape[0] / 2)
+    training_N = int(274)
     X_data = tf.convert_to_tensor(X[:training_N, :])
     y_data = tf.convert_to_tensor(y[:training_N, :])
     input_dim = X_data.shape[1]
@@ -36,7 +36,7 @@ if __name__ == "__main__":
 
     model.summary()
     # Train the model
-    history = model.fit(X_data, y_data, epochs=40, batch_size=32)
+    history = model.fit(X_data, y_data, epochs=64, batch_size=32)
     y_predicted = model.predict(X_data)
     np.set_printoptions(precision=4, suppress=True)
     # print("expected output:\n", y_data)
