@@ -51,7 +51,7 @@ def find_distances(water_coor, atoms_coords):
 
     ----------------------------------------------------------------------------
     Returns:
-    dist: N x 1
+    dist: ndarray N x 1
     distances between given water and N prtein atoms
     """
     delta = atoms_coords - water_coor
@@ -90,11 +90,58 @@ def find_n_nearest_atoms(water, atoms, n):
     return n_nearest_atoms
 
 
+def find_atoms_within_box(x, step_x, y, step_y, z, step_z, atoms):
+    scan_x = np.logical_and(atoms[:, -3] < (x + step_x), atoms[:, -3] >= x)
+    scan_y = np.logical_and(atoms[:, -2] < (y + step_y), atoms[:, -2] >= y)
+    scan_z = np.logical_and(atoms[:, -1] < (z + step_z), atoms[:, -1] >= z)
+    atoms_within_box = np.logical_and(scan_x, scan_y)
+    atoms_within_box = np.logical_and(atoms_within_box, scan_z)
+
+    return atoms_within_box
+
+
+def get_input_partitions(atoms, partitions=2):
+    """
+    calculate partitions for protein atoms; the size is defined by box_size
+    ----------------------------------------------------------------------------
+    atoms: ndarray N x 7
+    Array of protein atoms' information
+
+    box_size: float angstoms
+    Size of a single partition
+    ----------------------------------------------------------------------------
+    Returns:
+    atoms_partitions: ndarray num_of_boxes x atoms_in_box x 7
+    """
+    box_min = np.min(atoms[:, -3:], axis=0)
+    box_max = np.max(atoms[:, -3:], axis=0)
+    # box_length = box_max - box_min
+    # num_of_boxes = (box_length / box_size).astype(int)
+    partitions_x, step_x = np.linspace(box_min[0], box_max[0], partitions,
+                                       retstep=True)
+    partitions_y, step_y = np.linspace(box_min[1], box_max[1], partitions,
+                                       retstep=True)
+    partitions_z, step_z = np.linspace(box_min[2], box_max[2], partitions,
+                                       retstep=True)
+    atoms_partitions = []
+    for one_x in partitions_x:
+        for one_y in partitions_y:
+            for one_z in partitions_z:
+                atoms_within_box = find_atoms_within_box(one_x, step_x,
+                                                         one_y, step_y,
+                                                         one_z, step_z,
+                                                         atoms)
+                if atoms_within_box.any():
+                    atoms_partitions.append(atoms[atoms_within_box])
+
+    return atoms_partitions
+
+
 def generate_training_yes_X(waters, atoms, n):
     """
     Generate X training data for yes cases for neural network
     ----------------------------------------------------------------------------
-    waters: ndrray W x 7
+    waters: ndarray W x 7
     Array of water information
 
     atoms: ndarray N x 7
@@ -138,6 +185,19 @@ def generate_training_yes_y(W):
     return training_y
 
 
+def check_num_of_protein_atoms(atoms_partitions, atoms):
+    num_of_atoms_in_partitions = 0
+    num_of_atoms = atoms.shape[0]
+    for i in range(len(atoms_partitions)):
+        num_of_atoms_in_partitions += atoms_partitions[i].shape[0]
+
+    if num_of_atoms_in_partitions == num_of_atoms:
+        return True
+
+    print(f"there are {num_of_atoms_in_partitions} atoms in partitions")
+    return False
+
+
 def generate_training_no_X(atoms, n):
     """
     Generate X training data for no cases for neural network
@@ -152,6 +212,15 @@ def generate_training_no_X(atoms, n):
     training_X: W x n x 7
     training X data
     """
+    print("Partitioning protein atoms...")
+    atoms_partitions = get_input_partitions(atoms, partitions=2)
+    print("Checking atom count in partitions...")
+    is_same_count = check_num_of_protein_atoms(atoms_partitions, atoms)
+    if is_same_count:
+        print("Partitioning successful")
+    else:
+        print("Atom count error")
+        exit()
     P = atoms.shape[0]
     training_X = np.zeros([P, 7 * n])
     for i in range(P):
@@ -241,14 +310,14 @@ def read_pdb(input_pdb):
             num_of_atom_types += 1
             atom_types[atom_type] = num_of_atom_types
             atom_encode = feature_encoder_atom(atom_types[atom_type])
-            print("atom_types:", atom_types)
+            # print("atom_types:", atom_types)
         try:
             residue_encode = feature_encoder_residue(residue_types[res_type])
         except KeyError:
             num_of_residue_types += 1
             residue_types[res_type] = num_of_residue_types
             residue_encode = feature_encoder_residue(residue_types[res_type])
-            print("residue_types:", residue_types)
+            # print("residue_types:", residue_types)
 
         one_data = np.append(one_data, atom_encode)
         one_data = np.append(one_data, residue_encode)
@@ -273,7 +342,7 @@ if __name__ == '__main__':
     training_y = np.append(training_yes_y, training_no_y, axis=0)
     # np.random.shuffle(training_X)
     # np.random.shuffle(training_y)
-    np.save('test_data/CI_X.npy', training_X)
-    np.save('test_data/CI_y.npy', training_y)
+    np.save('test_data/CI_X_test.npy', training_X)
+    np.save('test_data/CI_y_test.npy', training_y)
 
     pass
