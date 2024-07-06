@@ -138,6 +138,51 @@ def generate_training_yes_y(W):
     return training_y
 
 
+def generate_training_no_X(atoms, n):
+    """
+    Generate X training data for no cases for neural network
+    ----------------------------------------------------------------------------
+    atoms: ndarray N x 7
+    Array of other atoms' information
+
+    n: int
+    Number of closest atoms
+    ----------------------------------------------------------------------------
+    Returns:
+    training_X: W x n x 7
+    training X data
+    """
+    P = atoms.shape[0]
+    training_X = np.zeros([P, 7 * n])
+    for i in range(P):
+        n_nearest_atoms = find_n_nearest_atoms(atoms[i], atoms, n)
+        internal_coords = get_internal_coords(
+                n_nearest_atoms[:, -4:-1] - atoms[i, -3:])
+        one_training_X = np.append(n_nearest_atoms[:, 0:4],
+                                   internal_coords, axis=1)
+        training_X[i] = one_training_X.flatten()
+
+    return training_X
+
+
+def generate_training_no_y(P):
+    """
+    generate y training data for no cases
+    ----------------------------------------------------------------------------
+    P: int
+    Number of protein atoms or no cases
+    ----------------------------------------------------------------------------
+    Returns:
+    training_y: ndarray: 2 x W
+    training y data
+    """
+    ones = np.ones(P)
+    zeros = np.zeros(P)
+    training_y = np.append(zeros[:, np.newaxis], ones[:, np.newaxis], axis=1)
+
+    return training_y
+
+
 def feature_encoder_atom(feature_number):
     """
     takes a number and outputs [cos(number), sin(number)]
@@ -220,8 +265,14 @@ if __name__ == '__main__':
     input_pdb = sys.argv[1]
     water_data, protein_data = read_pdb(input_pdb)
     total_data = np.append(water_data, protein_data, axis=0)
-    training_X = generate_training_yes_X(water_data, total_data, n=10)
-    training_y = generate_training_yes_y(water_data.shape[0])
+    training_yes_X = generate_training_yes_X(water_data, total_data, n=10)
+    training_yes_y = generate_training_yes_y(water_data.shape[0])
+    training_no_X = generate_training_no_X(protein_data, n=10)
+    training_no_y = generate_training_no_y(protein_data.shape[0])
+    training_X = np.append(training_yes_X, training_no_X, axis=0)
+    training_y = np.append(training_yes_y, training_no_y, axis=0)
+    # np.random.shuffle(training_X)
+    # np.random.shuffle(training_y)
     np.save('test_data/CI_X.npy', training_X)
     np.save('test_data/CI_y.npy', training_y)
 
