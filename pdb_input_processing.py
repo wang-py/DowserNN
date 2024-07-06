@@ -189,7 +189,9 @@ def check_num_of_protein_atoms(atoms_partitions, atoms):
     num_of_atoms_in_partitions = 0
     num_of_atoms = atoms.shape[0]
     for i in range(len(atoms_partitions)):
-        num_of_atoms_in_partitions += atoms_partitions[i].shape[0]
+        one_P = atoms_partitions[i].shape[0]
+        print(f"num of atoms in partition {i + 1}: {one_P}")
+        num_of_atoms_in_partitions += one_P
 
     if num_of_atoms_in_partitions == num_of_atoms:
         return True
@@ -209,7 +211,7 @@ def generate_training_no_X(atoms, n):
     Number of closest atoms
     ----------------------------------------------------------------------------
     Returns:
-    training_X: W x n x 7
+    training_X: P x n x 7
     training X data
     """
     print("Partitioning protein atoms...")
@@ -221,17 +223,25 @@ def generate_training_no_X(atoms, n):
     else:
         print("Atom count error")
         exit()
+    num_of_partitions = len(atoms_partitions)
     P = atoms.shape[0]
-    training_X = np.zeros([P, 7 * n])
-    for i in range(P):
-        n_nearest_atoms = find_n_nearest_atoms(atoms[i], atoms, n)
-        internal_coords = get_internal_coords(
-                n_nearest_atoms[:, -4:-1] - atoms[i, -3:])
-        one_training_X = np.append(n_nearest_atoms[:, 0:4],
-                                   internal_coords, axis=1)
-        training_X[i] = one_training_X.flatten()
+    training_X = []  # np.zeros([None, 7 * n])
+    for i in range(num_of_partitions):
+        partition = atoms_partitions[i]
+        num_atoms_in_box = partition.shape[0]
+        for j in range(num_atoms_in_box):
+            n_nearest_atoms = find_n_nearest_atoms(partition[j], partition, n)
+            internal_coords = get_internal_coords(
+                    n_nearest_atoms[:, -4:-1] - atoms[i, -3:])
+            one_training_X = np.append(n_nearest_atoms[:, 0:4],
+                                       internal_coords, axis=1)
+            training_X.append(one_training_X.flatten())
 
-    return training_X
+    if len(training_X) == P:
+        return training_X
+    else:
+        print("Number of training X data and input mismatch")
+        exit()
 
 
 def generate_training_no_y(P):
