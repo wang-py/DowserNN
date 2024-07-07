@@ -350,6 +350,7 @@ if __name__ == '__main__':
     training_no_y = generate_training_no_y(protein_data.shape[0])
     training_X = np.append(training_yes_X, training_no_X, axis=0)
     training_y = np.append(training_yes_y, training_no_y, axis=0)
+    # TODO: need to randomize X and y arrays
     # np.random.shuffle(training_X)
     # np.random.shuffle(training_y)
     np.save('test_data/CI_X_test.npy', training_X)
