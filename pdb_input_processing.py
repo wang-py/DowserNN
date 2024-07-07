@@ -84,7 +84,10 @@ def find_n_nearest_atoms(water, atoms, n):
 
     dist = find_distances(water[-3:], atoms[:, -3:])
     atoms_with_dist = np.append(atoms, dist[:, np.newaxis], axis=1)
-    atoms_sorted = atoms_with_dist[atoms_with_dist[:, -1].argsort()]
+    search_range = 15
+    atoms_within_range = atoms_with_dist[np.where(atoms_with_dist[:, -1] <
+                                                  search_range)]
+    atoms_sorted = atoms_within_range[atoms_within_range[:, -1].argsort()]
     n_nearest_atoms = atoms_sorted[1:n + 1]
 
     return n_nearest_atoms
@@ -214,34 +217,43 @@ def generate_training_no_X(atoms, n):
     training_X: P x n x 7
     training X data
     """
-    print("Partitioning protein atoms...")
-    atoms_partitions = get_input_partitions(atoms, partitions=2)
-    print("Checking atom count in partitions...")
-    is_same_count = check_num_of_protein_atoms(atoms_partitions, atoms)
-    if is_same_count:
-        print("Partitioning successful")
-    else:
-        print("Atom count error")
-        exit()
-    num_of_partitions = len(atoms_partitions)
+    # print("Partitioning protein atoms...")
+    # atoms_partitions = get_input_partitions(atoms, partitions=2)
+    # print("Checking atom count in partitions...")
+    # is_same_count = check_num_of_protein_atoms(atoms_partitions, atoms)
+    # if is_same_count:
+    #     print("Partitioning successful")
+    # else:
+    #     print("Atom count error")
+    #     exit()
+    # num_of_partitions = len(atoms_partitions)
     P = atoms.shape[0]
-    training_X = []  # np.zeros([None, 7 * n])
-    for i in range(num_of_partitions):
-        partition = atoms_partitions[i]
-        num_atoms_in_box = partition.shape[0]
-        for j in range(num_atoms_in_box):
-            n_nearest_atoms = find_n_nearest_atoms(partition[j], partition, n)
-            internal_coords = get_internal_coords(
-                    n_nearest_atoms[:, -4:-1] - atoms[i, -3:])
-            one_training_X = np.append(n_nearest_atoms[:, 0:4],
-                                       internal_coords, axis=1)
-            training_X.append(one_training_X.flatten())
+    training_X = np.zeros([P, 7 * n])
+    for i in range(P):
+        n_nearest_atoms = find_n_nearest_atoms(atoms[i], atoms, n)
+        internal_coords = get_internal_coords(
+                n_nearest_atoms[:, -4:-1] - atoms[i, -3:])
+        one_training_X = np.append(n_nearest_atoms[:, 0:4],
+                                   internal_coords, axis=1)
+        training_X[i] = one_training_X.flatten()
 
-    if len(training_X) == P:
-        return training_X
-    else:
-        print("Number of training X data and input mismatch")
-        exit()
+    return training_X
+    # for i in range(num_of_partitions):
+    #     partition = atoms_partitions[i]
+    #     num_atoms_in_box = partition.shape[0]
+    #     for j in range(num_atoms_in_box):
+    #         n_nearest_atoms = find_n_nearest_atoms(partition[j], partition, n)
+    #         internal_coords = get_internal_coords(
+    #                 n_nearest_atoms[:, -4:-1] - atoms[i, -3:])
+    #         one_training_X = np.append(n_nearest_atoms[:, 0:4],
+    #                                    internal_coords, axis=1)
+    #         training_X.append(one_training_X.flatten())
+
+    # if len(training_X) == P:
+    #     return training_X
+    # else:
+    #     print("Number of training X data and input mismatch")
+    #     exit()
 
 
 def generate_training_no_y(P):
@@ -353,7 +365,7 @@ if __name__ == '__main__':
     # TODO: need to randomize X and y arrays
     # np.random.shuffle(training_X)
     # np.random.shuffle(training_y)
-    np.save('test_data/CI_X_test.npy', training_X)
-    np.save('test_data/CI_y_test.npy', training_y)
+    np.save('test_data/CI_X.npy', training_X)
+    np.save('test_data/CI_y.npy', training_y)
 
     pass
