@@ -133,7 +133,7 @@ def output(argmax_vec, A2):
 if __name__ == "__main__":
     X = np.load("test_data/CI_X.npy").T
     y = np.load("test_data/CI_y.npy").T
-    train_N = 200
+    train_N = 275
     test_N = X.shape[1] - train_N
     # Number of inputs
     input_dim = X.shape[0]
@@ -180,7 +180,7 @@ if __name__ == "__main__":
     # print("test inputs:\n", validation_inputs)
     # print("validation outputs:\n", validation_outputs)
     print("trained output with test input:\n", test_predicted)
-    error = np.mean(np.square(test_predicted - test_outputs))
+    error = np.sum(np.square(test_predicted - test_outputs))
     print(f"error: {error}")
     fig, ax = plt.subplots(figsize=(12, 8))
     ax.plot(np.arange(iters), loss, label="loss function", color='b')
