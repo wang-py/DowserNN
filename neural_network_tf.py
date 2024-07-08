@@ -23,7 +23,7 @@ if __name__ == "__main__":
     X = np.load("test_data/CI_X.npy")
     y = np.load("test_data/CI_y.npy")
 
-    training_N = int(50000)
+    training_N = X.shape[0]  # int(10000)
     X_data = tf.convert_to_tensor(X[:training_N, :])
     y_data = tf.convert_to_tensor(y[:training_N, :])
     input_dim = X_data.shape[1]
@@ -59,11 +59,12 @@ if __name__ == "__main__":
     # print("predicted output:\n", y_predicted)
 
     # test with new data
-    test_loss = model.evaluate(X_test, y_test)
+    if N != X_data.shape[0]:
+        test_loss = model.evaluate(X_test, y_test)
+        print(f"loss: {test_loss:.0%}")
     # print("expected output:\n", y_test)
     # print("predicted output:\n", y_validate)
     # error_percent = np.sum(y_validate - y_test) / np.sum(y_test)
-    print(f"loss: {test_loss:.0%}")
 
     # Plot training loss
     # fig, ax = plt.subplots(figsize=(8, 6))
@@ -72,12 +73,18 @@ if __name__ == "__main__":
     # ax.set_ylabel('Loss')
     # ax.set_title('Training Loss')
     # ax.legend()
-    fig_a, ax_a = plt.subplots()
+    fig_a, ax_a = plt.subplots(figsize=(10, 10))
+    weights_plot = ax_a.imshow(weights_history[0])
+    colorbar = fig_a.colorbar(weights_plot, ax=ax_a, shrink=0.5)
+    ax_a.set_title("weights in hidden layer over epochs")
+    ax_a.set_xlabel("hidden layer size")
+    ax_a.set_ylabel("input dimension")
     epochs = 64
     artists = []
     for i in range(epochs):
         container = ax_a.imshow(weights_history[i])
-        artists.append([container])
+        epoch_index = ax_a.annotate(f"Epoch = {(i + 1):d}", xy=(0.5, 0.2))
+        artists.append([container, epoch_index])
 
     ani = ArtistAnimation(fig=fig_a, artists=artists, interval=100)
     # ax[1].plot(history.history['cross_entropy'], label='cross entropy')
