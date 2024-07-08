@@ -1,5 +1,6 @@
 import sys
 # import os
+import timeit
 import numpy as np
 
 residue_types = {'ALA': 1, 'ARG': 2, 'ASP': 3, 'ASN': 4, 'CYS': 5, 'GLU': 6,
@@ -87,9 +88,14 @@ def find_n_nearest_atoms(water, atoms, n):
     search_range = 15
     atoms_within_range = atoms_with_dist[np.where(atoms_with_dist[:, -1] <
                                                   search_range)]
-    atoms_sorted = atoms_within_range[atoms_within_range[:, -1].argsort()]
-    n_nearest_atoms = atoms_sorted[1:n + 1]
+    if atoms_within_range.shape[0] >= n:
+        atoms_sorted = atoms_within_range[atoms_within_range[:, -1].argsort()]
+    # if there are not enough atoms within range
+    else:
+        atoms_within_range = atoms_with_dist[np.where(atoms_with_dist[:, -1] <
+                                                      search_range * 2)]
 
+    n_nearest_atoms = atoms_sorted[1:n + 1]
     return n_nearest_atoms
 
 
@@ -352,19 +358,29 @@ def read_pdb(input_pdb):
     return np.array(water_data), np.array(protein_data)
 
 
+def randomize_training_data(training_X, training_y):
+    assert training_X.shape[0] == training_y.shape[0]
+    p = np.random.permutation(training_X.shape[0])
+    return training_X[p], training_y[p]
+
+
 if __name__ == '__main__':
     input_pdb = sys.argv[1]
     water_data, protein_data = read_pdb(input_pdb)
     total_data = np.append(water_data, protein_data, axis=0)
+    print("Generating training data...")
+    starting_time = timeit.default_timer()
     training_yes_X = generate_training_yes_X(water_data, total_data, n=10)
     training_yes_y = generate_training_yes_y(water_data.shape[0])
     training_no_X = generate_training_no_X(protein_data, n=10)
     training_no_y = generate_training_no_y(protein_data.shape[0])
     training_X = np.append(training_yes_X, training_no_X, axis=0)
     training_y = np.append(training_yes_y, training_no_y, axis=0)
+    ending_time = timeit.default_timer()
+    total_time = ending_time - starting_time
+    print(f"Data processing took {total_time} seconds")
     # TODO: need to randomize X and y arrays
-    # np.random.shuffle(training_X)
-    # np.random.shuffle(training_y)
+    training_X, training_y = randomize_training_data(training_X, training_y)
     np.save('test_data/CI_X.npy', training_X)
     np.save('test_data/CI_y.npy', training_y)
 
