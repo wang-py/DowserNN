@@ -75,6 +75,7 @@ if __name__ == "__main__":
     # ax.legend()
     fig_a, ax_a = plt.subplots(figsize=(10, 10))
     weights_plot = ax_a.imshow(weights_history[0])
+    # TODO: set the range of color bar to be min and max of weights
     colorbar = fig_a.colorbar(weights_plot, ax=ax_a, shrink=0.5)
     ax_a.set_title("weights in hidden layer over epochs")
     ax_a.set_xlabel("hidden layer size")
