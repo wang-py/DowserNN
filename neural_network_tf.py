@@ -46,20 +46,22 @@ if __name__ == "__main__":
     model.add(Dense(2, activation="softmax"))
 
     # Compile the model
-    model.compile(optimizer=Adam(learning_rate=0.01), loss="binary_crossentropy")
+    model.compile(optimizer=Adam(learning_rate=0.01),
+                  loss="binary_crossentropy")
     model.build((N, input_dim))
 
     model.summary()
+    epochs = 64
     # Train the model
-    history = model.fit(X_data, y_data, epochs=64, batch_size=32,
+    history = model.fit(X_data, y_data, epochs=epochs, batch_size=32,
                         callbacks=callback)
-    y_predicted = model.predict(X_data)
+    # y_predicted = model.predict(X_data)
     np.set_printoptions(precision=4, suppress=True)
     # print("expected output:\n", y_data)
     # print("predicted output:\n", y_predicted)
 
     # test with new data
-    if N != X_data.shape[0]:
+    if training_N != X_data.shape[0]:
         test_loss = model.evaluate(X_test, y_test)
         print(f"loss: {test_loss:.0%}")
     # print("expected output:\n", y_test)
@@ -74,20 +76,25 @@ if __name__ == "__main__":
     # ax.set_title('Training Loss')
     # ax.legend()
     fig_a, ax_a = plt.subplots(figsize=(10, 10))
-    weights_plot = ax_a.imshow(weights_history[0])
+    v_min = np.array(weights_history).min()
+    v_max = np.array(weights_history).max()
+    print(f"minimum weight: {v_min:.2f}")
+    print(f"maximum weight: {v_max:.2f}")
+    weights_plot = ax_a.imshow(weights_history[0], cmap='hot',
+                               vmin=v_min, vmax=v_max)
     # TODO: set the range of color bar to be min and max of weights
     colorbar = fig_a.colorbar(weights_plot, ax=ax_a, shrink=0.5)
     ax_a.set_title("weights in hidden layer over epochs")
     ax_a.set_xlabel("hidden layer size")
     ax_a.set_ylabel("input dimension")
-    epochs = 64
     artists = []
     for i in range(epochs):
-        container = ax_a.imshow(weights_history[i])
-        epoch_index = ax_a.annotate(f"Epoch = {(i + 1):d}", xy=(0.5, 0.2))
+        container = ax_a.imshow(weights_history[i], cmap='hot')
+        epoch_index = ax_a.annotate(f"Epoch = {(i + 1):d}", xy=(0.1, 0.1),
+                                    xycoords='figure fraction')
         artists.append([container, epoch_index])
 
-    ani = ArtistAnimation(fig=fig_a, artists=artists, interval=100)
+    ani = ArtistAnimation(fig=fig_a, artists=artists, interval=60)
     # ax[1].plot(history.history['cross_entropy'], label='cross entropy')
     # ax[1].set_title('cross entropy')
     # ax[1].legend()
