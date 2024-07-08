@@ -378,8 +378,7 @@ if __name__ == '__main__':
     training_y = np.append(training_yes_y, training_no_y, axis=0)
     ending_time = timeit.default_timer()
     total_time = ending_time - starting_time
-    print(f"Data processing took {total_time} seconds")
-    # TODO: need to randomize X and y arrays
+    print(f"Data processing took {total_time:.2f} seconds")
     training_X, training_y = randomize_training_data(training_X, training_y)
     np.save('test_data/CI_X.npy', training_X)
     np.save('test_data/CI_y.npy', training_y)
