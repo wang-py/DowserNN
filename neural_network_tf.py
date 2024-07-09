@@ -23,7 +23,7 @@ if __name__ == "__main__":
     X = np.load("test_data/CI_X.npy")
     y = np.load("test_data/CI_y.npy")
 
-    training_N = int(10000)  # X.shape[0]
+    training_N = X.shape[0] # int(10000)  # X.shape[0]
     X_data = tf.convert_to_tensor(X[:training_N, :])
     y_data = tf.convert_to_tensor(y[:training_N, :])
     input_dim = X_data.shape[1]
@@ -52,7 +52,7 @@ if __name__ == "__main__":
     model.build((N, input_dim))
 
     model.summary()
-    epochs = 64
+    epochs = 80
     # Train the model
     history = model.fit(X_data, y_data, epochs=epochs, batch_size=32,
                         callbacks=callback)
