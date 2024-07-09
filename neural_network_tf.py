@@ -27,6 +27,7 @@ if __name__ == "__main__":
     X_data = tf.convert_to_tensor(X[:training_N, :])
     y_data = tf.convert_to_tensor(y[:training_N, :])
     input_dim = X_data.shape[1]
+    hidden_dim = 80
     N = X_data.shape[0]
 
     X_test = tf.convert_to_tensor(X[training_N:, :])
@@ -37,7 +38,7 @@ if __name__ == "__main__":
     model = Sequential()
     model.add(
         Dense(
-            80,
+            hidden_dim,
             activation="relu",
             kernel_initializer="he_normal",
             bias_initializer='zeros'
@@ -61,7 +62,7 @@ if __name__ == "__main__":
     # print("predicted output:\n", y_predicted)
 
     # test with new data
-    if training_N != X_data.shape[0]:
+    if training_N != X.shape[0]:
         test_loss = model.evaluate(X_test, y_test)
         print(f"loss: {test_loss:.0%}")
     # print("expected output:\n", y_test)
@@ -77,21 +78,30 @@ if __name__ == "__main__":
     ax.legend()
 
     # visualizing weights
-    fig_a, ax_a = plt.subplots(figsize=(10, 10))
+    fig_a, ax_a = plt.subplots(subplot_kw={"projection": "3d"},
+                               figsize=(10, 10))
+    plot_X = np.arange(hidden_dim)
+    plot_Y = np.arange(input_dim)
+    plot_X, plot_Y = np.meshgrid(plot_X, plot_Y)
     v_min = np.array(weights_history).min()
     v_max = np.array(weights_history).max()
     print(f"minimum weight: {v_min:.2f}")
     print(f"maximum weight: {v_max:.2f}")
-    weights_plot = ax_a.imshow(weights_history[0], cmap='hot',
-                               vmin=v_min, vmax=v_max)
+    weights_surf = ax_a.plot_surface(plot_X, plot_Y, weights_history[0],
+                                     cmap='hot',
+                                     vmin=v_min, vmax=v_max)
+    # weights_plot = ax_a.imshow(weights_history[0], cmap='hot',
+    #                            vmin=v_min, vmax=v_max)
     # TODO: set the range of color bar to be min and max of weights
-    colorbar = fig_a.colorbar(weights_plot, ax=ax_a, shrink=0.5)
+    colorbar = fig_a.colorbar(weights_surf, ax=ax_a, shrink=0.5)
     ax_a.set_title("weights in hidden layer over epochs")
     ax_a.set_xlabel("hidden layer size")
     ax_a.set_ylabel("input dimension")
     artists = []
     for i in range(epochs):
-        container = ax_a.imshow(weights_history[i], cmap='hot')
+        # container = ax_a.imshow(weights_history[i], cmap='hot')
+        container = ax_a.plot_surface(plot_X, plot_Y, weights_history[i],
+                                      cmap='hot')
         epoch_index = ax_a.annotate(f"Epoch = {(i + 1):d}", xy=(0.1, 0.1),
                                     xycoords='figure fraction')
         artists.append([container, epoch_index])
