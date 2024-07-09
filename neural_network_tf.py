@@ -23,7 +23,7 @@ if __name__ == "__main__":
     X = np.load("test_data/CI_X.npy")
     y = np.load("test_data/CI_y.npy")
 
-    training_N = X.shape[0]  # int(10000)
+    training_N = int(10000)  # X.shape[0]
     X_data = tf.convert_to_tensor(X[:training_N, :])
     y_data = tf.convert_to_tensor(y[:training_N, :])
     input_dim = X_data.shape[1]
@@ -69,12 +69,14 @@ if __name__ == "__main__":
     # error_percent = np.sum(y_validate - y_test) / np.sum(y_test)
 
     # Plot training loss
-    # fig, ax = plt.subplots(figsize=(8, 6))
-    # ax.plot(history.history['loss'], label='cross entropy')
-    # ax.set_xlabel('Epoch')
-    # ax.set_ylabel('Loss')
-    # ax.set_title('Training Loss')
-    # ax.legend()
+    fig, ax = plt.subplots(figsize=(8, 6))
+    ax.plot(history.history['loss'], label='cross entropy')
+    ax.set_xlabel('Epoch')
+    ax.set_ylabel('Loss')
+    ax.set_title('Training Loss')
+    ax.legend()
+
+    # visualizing weights
     fig_a, ax_a = plt.subplots(figsize=(10, 10))
     v_min = np.array(weights_history).min()
     v_max = np.array(weights_history).max()
