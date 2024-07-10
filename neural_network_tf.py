@@ -23,11 +23,11 @@ if __name__ == "__main__":
     X = np.load("test_data/CI_X.npy")
     y = np.load("test_data/CI_y.npy")
 
-    training_N = int(33000)  # X.shape[0]
+    training_N = int(X.shape[0] / 2)  # int(33000)
     X_data = tf.convert_to_tensor(X[:training_N, :])
     y_data = tf.convert_to_tensor(y[:training_N, :])
     input_dim = X_data.shape[1]
-    hidden_dim = 80
+    hidden_dim = 20
     N = X_data.shape[0]
 
     X_test = tf.convert_to_tensor(X[training_N:, :])
@@ -48,7 +48,7 @@ if __name__ == "__main__":
 
     # Compile the model
     model.compile(optimizer=Adam(learning_rate=0.01),
-                  loss="binary_crossentropy")
+                  loss="binary_crossentropy", metrics=['accuracy'])
     model.build((N, input_dim))
 
     model.summary()
@@ -56,15 +56,16 @@ if __name__ == "__main__":
     # Train the model
     history = model.fit(X_data, y_data, epochs=epochs, batch_size=32,
                         callbacks=callback)
-    # y_predicted = model.predict(X_data)
+    y_predicted = model.predict(X_data)
     np.set_printoptions(precision=4, suppress=True)
     # print("expected output:\n", y_data)
     # print("predicted output:\n", y_predicted)
 
     # test with new data
+    test_loss = None
     if training_N != X.shape[0]:
-        test_loss = model.evaluate(X_test, y_test)
-        print(f"loss: {test_loss:.0%}")
+        test_loss, accuracy = model.evaluate(X_data, y_data)
+        print(f"test loss: {test_loss}")  # , test accuracy: {accuracy:.2%}")
     # print("expected output:\n", y_test)
     # print("predicted output:\n", y_validate)
     # error_percent = np.sum(y_validate - y_test) / np.sum(y_test)
@@ -74,12 +75,15 @@ if __name__ == "__main__":
     ax.plot(history.history['loss'], label='cross entropy')
     ax.set_xlabel('Epoch')
     ax.set_ylabel('Loss')
+    if test_loss is not None:
+        ax.axhline(test_loss, color='k', linestyle='--',
+                   label='test cross entropy')
     ax.set_title('Training Loss')
     ax.legend()
 
     # visualizing weights
     fig_a, ax_a = plt.subplots(subplot_kw={"projection": "3d"},
-                               figsize=(10, 10))
+                               figsize=(12, 12))
     plot_X = np.arange(hidden_dim)
     plot_Y = np.arange(input_dim)
     plot_X, plot_Y = np.meshgrid(plot_X, plot_Y)
