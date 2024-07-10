@@ -96,7 +96,6 @@ if __name__ == "__main__":
                                      vmin=v_min, vmax=v_max)
     # weights_plot = ax_a.imshow(weights_history[0], cmap='hot',
     #                            vmin=v_min, vmax=v_max)
-    # TODO: set the range of color bar to be min and max of weights
     colorbar = fig_a.colorbar(weights_surf, ax=ax_a, shrink=0.5)
     ax_a.set_title("weights in hidden layer over epochs")
     ax_a.set_xlabel("hidden layer size")
