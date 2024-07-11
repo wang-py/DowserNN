@@ -30,7 +30,7 @@ if __name__ == "__main__":
     X_data = tf.convert_to_tensor(X[:training_N, :])
     y_data = tf.convert_to_tensor(y[:training_N, :])
     input_dim = X_data.shape[1]
-    hidden_dim = 70
+    hidden_dim = 128
     N = X_data.shape[0]
 
     X_test = tf.convert_to_tensor(X[training_N:, :])
@@ -55,7 +55,7 @@ if __name__ == "__main__":
     model.build((N, input_dim))
 
     model.summary()
-    epochs = 100
+    epochs = 200
     # Train the model
     history = model.fit(X_data, y_data, epochs=epochs, batch_size=32,
                         callbacks=callback)
@@ -65,11 +65,11 @@ if __name__ == "__main__":
     # print("predicted output:\n", y_predicted)
 
     # test with new data
+    training_loss, training_accuracy = model.evaluate(X_data, y_data)
+    print(f"training loss: {training_loss}")
     test_loss = None
     if training_N != X.shape[0]:
-        training_loss, training_accuracy = model.evaluate(X_data, y_data)
         test_loss, accuracy = model.evaluate(X_test, y_test)
-        print(f"training loss: {training_loss}")
         print(f"test loss: {test_loss}")  # , test accuracy: {accuracy:.2%}")
     # print("expected output:\n", y_test)
     # print("predicted output:\n", y_validate)
@@ -80,11 +80,11 @@ if __name__ == "__main__":
     ax.plot(history.history['loss'], label='cross entropy')
     ax.set_xlabel('Epoch')
     ax.set_ylabel('Loss')
+    ax.axhline(training_loss, color='b', linestyle='--',
+               label='training cross entropy')
     if test_loss is not None:
         ax.axhline(test_loss, color='r', linestyle='--',
                    label='test cross entropy')
-        ax.axhline(training_loss, color='b', linestyle='--',
-                   label='training cross entropy')
     ax.set_title('Training Loss')
     ax.legend()
 
