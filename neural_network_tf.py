@@ -26,11 +26,11 @@ if __name__ == "__main__":
     X = np.load(X_file)
     y = np.load(y_file)
 
-    training_N = int(X.shape[0] / 2)  # int(33000)
+    training_N = int(X.shape[0] * 0.8)  # int(33000)
     X_data = tf.convert_to_tensor(X[:training_N, :])
     y_data = tf.convert_to_tensor(y[:training_N, :])
     input_dim = X_data.shape[1]
-    hidden_dim = 20
+    hidden_dim = 70
     N = X_data.shape[0]
 
     X_test = tf.convert_to_tensor(X[training_N:, :])
@@ -50,16 +50,16 @@ if __name__ == "__main__":
     model.add(Dense(2, activation="softmax"))
 
     # Compile the model
-    model.compile(optimizer=Adam(learning_rate=0.01),
+    model.compile(optimizer=Adam(learning_rate=0.001),
                   loss="binary_crossentropy", metrics=['accuracy'])
     model.build((N, input_dim))
 
     model.summary()
-    epochs = 64
+    epochs = 100
     # Train the model
     history = model.fit(X_data, y_data, epochs=epochs, batch_size=32,
                         callbacks=callback)
-    y_predicted = model.predict(X_data)
+    # y_predicted = model.predict(X_data)
     np.set_printoptions(precision=4, suppress=True)
     # print("expected output:\n", y_data)
     # print("predicted output:\n", y_predicted)
@@ -67,7 +67,9 @@ if __name__ == "__main__":
     # test with new data
     test_loss = None
     if training_N != X.shape[0]:
+        training_loss, training_accuracy = model.evaluate(X_data, y_data)
         test_loss, accuracy = model.evaluate(X_test, y_test)
+        print(f"training loss: {training_loss}")
         print(f"test loss: {test_loss}")  # , test accuracy: {accuracy:.2%}")
     # print("expected output:\n", y_test)
     # print("predicted output:\n", y_validate)
@@ -79,8 +81,10 @@ if __name__ == "__main__":
     ax.set_xlabel('Epoch')
     ax.set_ylabel('Loss')
     if test_loss is not None:
-        ax.axhline(test_loss, color='k', linestyle='--',
+        ax.axhline(test_loss, color='r', linestyle='--',
                    label='test cross entropy')
+        ax.axhline(training_loss, color='b', linestyle='--',
+                   label='training cross entropy')
     ax.set_title('Training Loss')
     ax.legend()
 
