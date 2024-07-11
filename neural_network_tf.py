@@ -1,4 +1,5 @@
 import numpy as np
+import sys
 from keras.models import Sequential
 from keras.layers import Dense
 from keras.optimizers import Adam
@@ -20,8 +21,10 @@ class weights_visualization_callback(callbacks.Callback):
 
 if __name__ == "__main__":
     # Generate training and validation data
-    X = np.load("test_data/CI_X.npy")
-    y = np.load("test_data/CI_y.npy")
+    X_file = sys.argv[1]
+    y_file = sys.argv[2]
+    X = np.load(X_file)
+    y = np.load(y_file)
 
     training_N = int(X.shape[0] / 2)  # int(33000)
     X_data = tf.convert_to_tensor(X[:training_N, :])
@@ -64,7 +67,7 @@ if __name__ == "__main__":
     # test with new data
     test_loss = None
     if training_N != X.shape[0]:
-        test_loss, accuracy = model.evaluate(X_data, y_data)
+        test_loss, accuracy = model.evaluate(X_test, y_test)
         print(f"test loss: {test_loss}")  # , test accuracy: {accuracy:.2%}")
     # print("expected output:\n", y_test)
     # print("predicted output:\n", y_validate)
