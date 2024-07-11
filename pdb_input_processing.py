@@ -234,16 +234,19 @@ def generate_training_no_X(atoms, n):
     #     exit()
     # num_of_partitions = len(atoms_partitions)
     P = atoms.shape[0]
-    training_X = np.zeros([P, 7 * n])
+    HOH_encoding = feature_encoder_residue(residue_types['HOH'])
+    training_X = []
     for i in range(P):
         n_nearest_atoms = find_n_nearest_atoms(atoms[i], atoms, n)
-        internal_coords = get_internal_coords(
-                n_nearest_atoms[:, -4:-1] - atoms[i, -3:])
-        one_training_X = np.append(n_nearest_atoms[:, 0:4],
-                                   internal_coords, axis=1)
-        training_X[i] = one_training_X.flatten()
+        HOH_check = n_nearest_atoms[:, 2:4] - HOH_encoding
+        if not np.any(HOH_check == 0.0):
+            internal_coords = get_internal_coords(
+                    n_nearest_atoms[:, -4:-1] - atoms[i, -3:])
+            one_training_X = np.append(n_nearest_atoms[:, 0:4],
+                                       internal_coords, axis=1)
+            training_X.append(one_training_X.flatten())
 
-    return training_X
+    return np.array(training_X)
     # for i in range(num_of_partitions):
     #     partition = atoms_partitions[i]
     #     num_atoms_in_box = partition.shape[0]
@@ -373,14 +376,14 @@ if __name__ == '__main__':
     starting_time = timeit.default_timer()
     training_yes_X = generate_training_yes_X(water_data, total_data, n=10)
     training_yes_y = generate_training_yes_y(water_data.shape[0])
-    training_no_X = generate_training_no_X(protein_data, n=10)
-    training_no_y = generate_training_no_y(protein_data.shape[0])
+    training_no_X = generate_training_no_X(total_data, n=10)
+    training_no_y = generate_training_no_y(training_no_X.shape[0])
     training_X = np.append(training_yes_X, training_no_X, axis=0)
     training_y = np.append(training_yes_y, training_no_y, axis=0)
     ending_time = timeit.default_timer()
     total_time = ending_time - starting_time
     print(f"Data processing took {total_time:.2f} seconds")
-    # training_X, training_y = randomize_training_data(training_X, training_y)
+    training_X, training_y = randomize_training_data(training_X, training_y)
     np.save(f'test_data/{pdb_name}_CI_X.npy', training_X)
     np.save(f'test_data/{pdb_name}_CI_y.npy', training_y)
 
