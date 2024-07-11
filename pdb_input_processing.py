@@ -1,5 +1,5 @@
 import sys
-# import os
+import os
 import timeit
 import numpy as np
 
@@ -366,6 +366,7 @@ def randomize_training_data(training_X, training_y):
 
 if __name__ == '__main__':
     input_pdb = sys.argv[1]
+    pdb_name = os.path.basename(input_pdb).split('.')[0]
     water_data, protein_data = read_pdb(input_pdb)
     total_data = np.append(water_data, protein_data, axis=0)
     print("Generating training data...")
@@ -379,8 +380,8 @@ if __name__ == '__main__':
     ending_time = timeit.default_timer()
     total_time = ending_time - starting_time
     print(f"Data processing took {total_time:.2f} seconds")
-    training_X, training_y = randomize_training_data(training_X, training_y)
-    np.save('test_data/CI_X.npy', training_X)
-    np.save('test_data/CI_y.npy', training_y)
+    # training_X, training_y = randomize_training_data(training_X, training_y)
+    np.save(f'test_data/{pdb_name}_CI_X.npy', training_X)
+    np.save(f'test_data/{pdb_name}_CI_y.npy', training_y)
 
     pass
