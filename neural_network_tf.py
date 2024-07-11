@@ -19,6 +19,17 @@ class weights_visualization_callback(callbacks.Callback):
         weights_history.append(weights_1)
 
 
+def get_model_accuracy(y_expected, y_predicted):
+    assert y_expected.shape[0] == y_predicted.shape[0]
+    y_expected = np.array(y_expected)
+    y_predicted = np.array(y_predicted)
+    accuracy_values = np.zeros(y_expected.shape[0])
+    for i in range(accuracy_values.shape[0]):
+        accuracy_values[i] = y_predicted[i].dot(y_expected[i].T)
+
+    return accuracy_values
+
+
 if __name__ == "__main__":
     # Generate training and validation data
     X_file = sys.argv[1]
@@ -59,7 +70,6 @@ if __name__ == "__main__":
     # Train the model
     history = model.fit(X_data, y_data, epochs=epochs, batch_size=32,
                         callbacks=callback)
-    # y_predicted = model.predict(X_data)
     np.set_printoptions(precision=4, suppress=True)
     # print("expected output:\n", y_data)
     # print("predicted output:\n", y_predicted)
@@ -75,7 +85,7 @@ if __name__ == "__main__":
     # print("predicted output:\n", y_validate)
     # error_percent = np.sum(y_validate - y_test) / np.sum(y_test)
 
-    # Plot training loss
+    # plot training loss
     fig, ax = plt.subplots(figsize=(8, 6))
     ax.plot(history.history['loss'], label='cross entropy')
     ax.set_xlabel('Epoch')
@@ -87,6 +97,14 @@ if __name__ == "__main__":
                    label='test cross entropy')
     ax.set_title('Training Loss')
     ax.legend()
+
+    # plot confidence for water molecules
+    y_predicted = model.predict(X_test)
+    accuracy_values = get_model_accuracy(y_test, y_predicted)
+    fig, ax = plt.subplots(figsize=(8, 6))
+    ax.bar(np.arange(accuracy_values.shape[0]), accuracy_values)
+    ax.set_xlabel("water index")
+    ax.set_ylabel("confidence")
 
     # visualizing weights
     fig_a, ax_a = plt.subplots(subplot_kw={"projection": "3d"},
