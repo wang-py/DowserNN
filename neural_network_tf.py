@@ -14,7 +14,8 @@ weights_history = []
 
 class weights_visualization_callback(callbacks.Callback):
     def on_epoch_end(self, batch, logs):
-        weights_1, biases_1, weights_2, biases_2 = model.get_weights()
+        weights_biases = model.get_weights()
+        weights_index = np.arange(0, len(weights_biases), 2)
         # print('on_epoch_end() model.weights:', weights_1)
         weights_history.append(weights_1)
 
@@ -27,19 +28,25 @@ def get_model_accuracy(y_expected, y_predicted):
     for i in range(accuracy_values.shape[0]):
         accuracy_values[i] = y_predicted[i].dot(y_expected[i].T)
 
-    return accuracy_values
+    return np.sort(accuracy_values)
 
 
 if __name__ == "__main__":
     # Generate training and validation data
     X_file = sys.argv[1]
     y_file = sys.argv[2]
+    X_yes_file = sys.argv[3]
+    y_yes_file = sys.argv[4]
     X = np.load(X_file)
     y = np.load(y_file)
+    X_yes = np.load(X_yes_file)
+    y_yes = np.load(y_yes_file)
 
-    training_N = int(X.shape[0] * 0.8)  # int(33000)
+    training_N = int(X.shape[0])  # int(33000)
     X_data = tf.convert_to_tensor(X[:training_N, :])
     y_data = tf.convert_to_tensor(y[:training_N, :])
+    X_validate = tf.convert_to_tensor(X_yes)
+    y_validate = tf.convert_to_tensor(y_yes)
     input_dim = X_data.shape[1]
     hidden_dim = 128
     N = X_data.shape[0]
@@ -58,15 +65,23 @@ if __name__ == "__main__":
             bias_initializer='zeros'
         )
     )
+    model.add(
+        Dense(
+            40,
+            activation="relu",
+            kernel_initializer="he_normal",
+            bias_initializer='zeros'
+        )
+    )
     model.add(Dense(2, activation="softmax"))
 
     # Compile the model
-    model.compile(optimizer=Adam(learning_rate=0.001),
+    model.compile(optimizer=Adam(learning_rate=0.0005),
                   loss="binary_crossentropy", metrics=['accuracy'])
     model.build((N, input_dim))
 
     model.summary()
-    epochs = 200
+    epochs = 400
     # Train the model
     history = model.fit(X_data, y_data, epochs=epochs, batch_size=32,
                         callbacks=callback)
@@ -99,12 +114,20 @@ if __name__ == "__main__":
     ax.legend()
 
     # plot confidence for water molecules
-    y_predicted = model.predict(X_test)
-    accuracy_values = get_model_accuracy(y_test, y_predicted)
+    y_predicted = model.predict(X_validate)
+    accuracy_values = get_model_accuracy(y_validate, y_predicted)
+    accuracy_threshold = 0.9
+    num_above_threshold = np.sum(accuracy_values > accuracy_threshold)
+    num_of_water = accuracy_values.shape[0]
+    percent_above_threshold = num_above_threshold / num_of_water
     fig, ax = plt.subplots(figsize=(8, 6))
-    ax.bar(np.arange(accuracy_values.shape[0]), accuracy_values)
+    ax.bar(np.arange(num_of_water), accuracy_values)
+    ax.axhline(accuracy_threshold, color='k', linestyle='--',
+               label=f'accuracy threshold = {accuracy_threshold}\n' +
+               f'% water above threshold: {percent_above_threshold:.0%}')
     ax.set_xlabel("water index")
     ax.set_ylabel("confidence")
+    ax.legend()
 
     # visualizing weights
     fig_a, ax_a = plt.subplots(subplot_kw={"projection": "3d"},
