@@ -24,7 +24,74 @@ class weights_visualization_callback(callbacks.Callback):
             self.weights_history[i].append(weights_biases[cur_weight_i])
 
     def get_weights(self):
-        return np.array(self.weights_history)
+        return self.weights_history
+
+
+class weights_history_visualizer:
+    def __init__(self, all_weights_history):
+        self.all_weights_history = all_weights_history
+        self.animations = []
+        pass
+
+    def animate_one_layer(self, weights_history):
+        fig, ax = plt.subplots(subplot_kw={"projection": "3d"},
+                               figsize=(12, 12))
+        epochs = len(weights_history)
+        input_dim, hidden_dim = weights_history[0].shape
+        plot_X = np.arange(hidden_dim)
+        plot_Y = np.arange(input_dim)
+        plot_X, plot_Y = np.meshgrid(plot_X, plot_Y)
+        v_min = np.array(weights_history).min()
+        v_max = np.array(weights_history).max()
+        print(f"minimum weight: {v_min:.2f}")
+        print(f"maximum weight: {v_max:.2f}")
+        weights_surf = ax.plot_surface(plot_X, plot_Y, weights_history[0],
+                                       cmap='hot',
+                                       vmin=v_min, vmax=v_max)
+        # weights_plot = ax_a.imshow(weights_history[0], cmap='hot',
+        #                            vmin=v_min, vmax=v_max)
+        fig.colorbar(weights_surf, ax=ax, shrink=0.5)
+        ax.set_title("weights in hidden layer over epochs")
+        ax.set_xlabel("hidden layer size")
+        ax.set_ylabel("input dimension")
+        artists = []
+        for i in range(epochs):
+            # container = ax_a.imshow(weights_history[i], cmap='hot')
+            container = ax.plot_surface(plot_X, plot_Y, weights_history[i],
+                                        cmap='hot')
+            epoch_index = ax.annotate(f"Epoch = {(i + 1):d}", xy=(0.1, 0.1),
+                                      xycoords='figure fraction')
+            artists.append([container, epoch_index])
+
+        ani = ArtistAnimation(fig=fig, artists=artists, interval=60)
+        self.animations.append(ani)
+        pass
+
+    def visualize(self):
+        for one_weights in self.all_weights_history:
+            self.animate_one_layer(one_weights)
+        plt.show()
+
+        pass
+
+
+def plot_model_accuracy(model, X_validate, y_validate):
+    y_predicted = model.predict(X_validate)
+    accuracy_values = get_model_accuracy(y_validate, y_predicted)
+    accuracy_threshold = 0.9
+    num_above_threshold = np.sum(accuracy_values > accuracy_threshold)
+    num_of_water = accuracy_values.shape[0]
+    percent_above_threshold = num_above_threshold / num_of_water
+    fig, ax = plt.subplots(figsize=(8, 6))
+    ax.bar(np.arange(num_of_water), accuracy_values)
+    ax.axhline(accuracy_threshold, color='k', linestyle='--',
+               label=f'accuracy threshold = {accuracy_threshold}\n' +
+               f'% water above threshold: {percent_above_threshold:.0%}')
+    ax.set_xlabel("water index")
+    ax.set_ylabel("confidence")
+    ax.legend()
+    plt.show()
+    pass
 
 
 def get_model_accuracy(y_expected, y_predicted):
@@ -88,7 +155,7 @@ if __name__ == "__main__":
     model.build((N, input_dim))
 
     model.summary()
-    epochs = 100
+    epochs = 10
     # Train the model
     history = model.fit(X_data, y_data, epochs=epochs, batch_size=32,
                         callbacks=callback)
@@ -119,54 +186,12 @@ if __name__ == "__main__":
                    label='test cross entropy')
     ax.set_title('Training Loss')
     ax.legend()
+    plt.show()
 
     # plot confidence for water molecules
-    y_predicted = model.predict(X_validate)
-    accuracy_values = get_model_accuracy(y_validate, y_predicted)
-    accuracy_threshold = 0.9
-    num_above_threshold = np.sum(accuracy_values > accuracy_threshold)
-    num_of_water = accuracy_values.shape[0]
-    percent_above_threshold = num_above_threshold / num_of_water
-    fig, ax = plt.subplots(figsize=(8, 6))
-    ax.bar(np.arange(num_of_water), accuracy_values)
-    ax.axhline(accuracy_threshold, color='k', linestyle='--',
-               label=f'accuracy threshold = {accuracy_threshold}\n' +
-               f'% water above threshold: {percent_above_threshold:.0%}')
-    ax.set_xlabel("water index")
-    ax.set_ylabel("confidence")
-    ax.legend()
+    plot_model_accuracy(model, X_validate, y_validate)
 
     # visualizing weights
     weights_history = callback.get_weights()
-    fig_a, ax_a = plt.subplots(subplot_kw={"projection": "3d"},
-                               figsize=(12, 12))
-    plot_X = np.arange(hidden_dim)
-    plot_Y = np.arange(input_dim)
-    plot_X, plot_Y = np.meshgrid(plot_X, plot_Y)
-    v_min = np.array(weights_history).min()
-    v_max = np.array(weights_history).max()
-    print(f"minimum weight: {v_min:.2f}")
-    print(f"maximum weight: {v_max:.2f}")
-    weights_surf = ax_a.plot_surface(plot_X, plot_Y, weights_history[0],
-                                     cmap='hot',
-                                     vmin=v_min, vmax=v_max)
-    # weights_plot = ax_a.imshow(weights_history[0], cmap='hot',
-    #                            vmin=v_min, vmax=v_max)
-    colorbar = fig_a.colorbar(weights_surf, ax=ax_a, shrink=0.5)
-    ax_a.set_title("weights in hidden layer over epochs")
-    ax_a.set_xlabel("hidden layer size")
-    ax_a.set_ylabel("input dimension")
-    artists = []
-    for i in range(epochs):
-        # container = ax_a.imshow(weights_history[i], cmap='hot')
-        container = ax_a.plot_surface(plot_X, plot_Y, weights_history[i],
-                                      cmap='hot')
-        epoch_index = ax_a.annotate(f"Epoch = {(i + 1):d}", xy=(0.1, 0.1),
-                                    xycoords='figure fraction')
-        artists.append([container, epoch_index])
-
-    ani = ArtistAnimation(fig=fig_a, artists=artists, interval=60)
-    # ax[1].plot(history.history['cross_entropy'], label='cross entropy')
-    # ax[1].set_title('cross entropy')
-    # ax[1].legend()
-    plt.show()
+    weights_visualizer = weights_history_visualizer(weights_history)
+    weights_visualizer.visualize()
