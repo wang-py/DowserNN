@@ -9,15 +9,22 @@ import matplotlib.pyplot as plt
 from matplotlib.animation import ArtistAnimation
 
 
-weights_history = []
-
-
 class weights_visualization_callback(callbacks.Callback):
+    def __init__(self, num_of_layers):
+        self.weights_history = [[] for _ in range(num_of_layers)]
+        self.weights_index = np.arange(0, num_of_layers * 2, 2)
+        self.num_of_layers = num_of_layers
+
     def on_epoch_end(self, batch, logs):
         weights_biases = model.get_weights()
-        weights_index = np.arange(0, len(weights_biases), 2)
         # print('on_epoch_end() model.weights:', weights_1)
-        weights_history.append(weights_1)
+
+        for i in range(self.num_of_layers):
+            cur_weight_i = self.weights_index[i]
+            self.weights_history[i].append(weights_biases[cur_weight_i])
+
+    def get_weights(self):
+        return np.array(self.weights_history)
 
 
 def get_model_accuracy(y_expected, y_predicted):
@@ -54,7 +61,7 @@ if __name__ == "__main__":
     X_test = tf.convert_to_tensor(X[training_N:, :])
     y_test = tf.convert_to_tensor(y[training_N:, :])
     # record weights during each training iteration
-    callback = weights_visualization_callback()
+    callback = weights_visualization_callback(num_of_layers=3)
     # Create a neural network model
     model = Sequential()
     model.add(
@@ -81,7 +88,7 @@ if __name__ == "__main__":
     model.build((N, input_dim))
 
     model.summary()
-    epochs = 400
+    epochs = 100
     # Train the model
     history = model.fit(X_data, y_data, epochs=epochs, batch_size=32,
                         callbacks=callback)
@@ -130,6 +137,7 @@ if __name__ == "__main__":
     ax.legend()
 
     # visualizing weights
+    weights_history = callback.get_weights()
     fig_a, ax_a = plt.subplots(subplot_kw={"projection": "3d"},
                                figsize=(12, 12))
     plot_X = np.arange(hidden_dim)
