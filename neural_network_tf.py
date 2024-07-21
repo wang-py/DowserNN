@@ -35,7 +35,7 @@ class weights_history_visualizer:
         pass
 
     def update(self, frame, ax):
-        for j in range(self.num_of_layers):
+        for j in range(self.num_of_layers - 1):
             ax[j].cla()
             weights_history = self.all_weights_history[j]
             input_dim, hidden_dim = weights_history[0].shape
@@ -50,15 +50,21 @@ class weights_history_visualizer:
 
         ax[0].annotate(f"Epoch = {(frame + 1):d}", xy=(0.1, 0.1),
                        xycoords='figure fraction')
+        ax[-1].cla()
+        ax[-1].imshow(self.all_weights_history[-1][frame], cmap='hot')
+        ax[-1].set_title(f"hidden layer {self.num_of_layers}")
+        ax[-1].set_xlabel("hidden layer size")
+        ax[-1].set_ylabel("input dimension")
         return ax
 
     def visualize(self):
-        fig, ax = plt.subplots(1, self.num_of_layers,
-                               subplot_kw={"projection": "3d"},
-                               figsize=(20, 8))
-        epochs = len(self.all_weights_history[0])
+        fig, ax = plt.subplots(1, self.num_of_layers, figsize=(20, 8))
         fig.suptitle("weights in hidden layer over epochs")
-        for j in range(self.num_of_layers):
+        epochs = len(self.all_weights_history[0])
+        for j in range(self.num_of_layers - 1):
+            ax[j].remove()
+            ax[j] = fig.add_subplot(1, self.num_of_layers, j + 1,
+                                    projection='3d')
             weights_history = self.all_weights_history[j]
             input_dim, hidden_dim = weights_history[0].shape
             plot_X = np.arange(hidden_dim)
@@ -74,7 +80,17 @@ class weights_history_visualizer:
                                               vmin=v_min, vmax=v_max)
             fig.colorbar(weights_surf, ax=ax[j], shrink=0.5)
 
-        ani = FuncAnimation(fig=fig, func=self.update, fargs=(ax,),
+        last_layer_w = self.all_weights_history[-1]
+        ax[-1].remove()
+        ax[-1] = fig.add_subplot(1, self.num_of_layers, self.num_of_layers)
+        v_min = np.array(last_layer_w).min()
+        v_max = np.array(last_layer_w).max()
+        print(f"minimum weight: {v_min:.2f}")
+        print(f"maximum weight: {v_max:.2f}")
+        weights_grid = ax[-1].imshow(last_layer_w[0], cmap='hot')
+        fig.colorbar(weights_grid, ax=ax[-1], shrink=0.5)
+
+        ani = FuncAnimation(fig=fig, func=self.update, fargs=(ax, ),
                             frames=epochs, interval=30)
         self.animations.append(ani)
 
@@ -149,7 +165,7 @@ if __name__ == "__main__":
     )
     model.add(
         Dense(
-            40,
+            64,
             activation="relu",
             kernel_initializer="he_normal",
             bias_initializer='zeros'
