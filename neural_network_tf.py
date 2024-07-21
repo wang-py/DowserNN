@@ -58,7 +58,8 @@ class weights_history_visualizer:
         return ax
 
     def visualize(self):
-        fig, ax = plt.subplots(1, self.num_of_layers, figsize=(20, 8))
+        fig, ax = plt.subplots(1, self.num_of_layers,
+                               figsize=(6 * self.num_of_layers, 8))
         fig.suptitle("weights in hidden layer over epochs")
         epochs = len(self.all_weights_history[0])
         for j in range(self.num_of_layers - 1):
@@ -195,7 +196,7 @@ if __name__ == "__main__":
     model.build((N, input_dim))
 
     model.summary()
-    epochs = 10
+    epochs = 20
     # Train the model
     history = model.fit(X_data, y_data, epochs=epochs, batch_size=32,
                         callbacks=callback)
