@@ -130,6 +130,21 @@ def get_model_accuracy(y_expected, y_predicted):
     return np.sort(accuracy_values)
 
 
+def plot_loss_history(history):
+    fig, ax = plt.subplots(figsize=(8, 6))
+    ax.plot(history.history['loss'], label='cross entropy')
+    ax.set_xlabel('Epoch')
+    ax.set_ylabel('Loss')
+    ax.axhline(training_loss, color='b', linestyle='--',
+               label='training cross entropy')
+    if test_loss is not None:
+        ax.axhline(test_loss, color='r', linestyle='--',
+                   label='test cross entropy')
+    ax.set_title('Training Loss')
+    ax.legend()
+    plt.show()
+
+
 if __name__ == "__main__":
     # Generate training and validation data
     X_file = sys.argv[1]
@@ -216,18 +231,7 @@ if __name__ == "__main__":
     # error_percent = np.sum(y_validate - y_test) / np.sum(y_test)
 
     # plot training loss
-    fig, ax = plt.subplots(figsize=(8, 6))
-    ax.plot(history.history['loss'], label='cross entropy')
-    ax.set_xlabel('Epoch')
-    ax.set_ylabel('Loss')
-    ax.axhline(training_loss, color='b', linestyle='--',
-               label='training cross entropy')
-    if test_loss is not None:
-        ax.axhline(test_loss, color='r', linestyle='--',
-                   label='test cross entropy')
-    ax.set_title('Training Loss')
-    ax.legend()
-    plt.show()
+    plot_loss_history(history)
 
     # plot confidence for water molecules
     plot_model_accuracy(model, X_validate, y_validate)
