@@ -152,7 +152,7 @@ if __name__ == "__main__":
     X_test = tf.convert_to_tensor(X[training_N:, :])
     y_test = tf.convert_to_tensor(y[training_N:, :])
     # record weights during each training iteration
-    callback = weights_visualization_callback(num_of_layers=3)
+    callback = weights_visualization_callback(num_of_layers=5)
     # Create a neural network model
     model = Sequential()
     model.add(
@@ -166,6 +166,22 @@ if __name__ == "__main__":
     model.add(
         Dense(
             64,
+            activation="relu",
+            kernel_initializer="he_normal",
+            bias_initializer='zeros'
+        )
+    )
+    model.add(
+        Dense(
+            32,
+            activation="relu",
+            kernel_initializer="he_normal",
+            bias_initializer='zeros'
+        )
+    )
+    model.add(
+        Dense(
+            16,
             activation="relu",
             kernel_initializer="he_normal",
             bias_initializer='zeros'
