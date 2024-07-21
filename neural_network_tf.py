@@ -6,7 +6,7 @@ from keras.optimizers import Adam
 from keras import callbacks
 import tensorflow as tf
 import matplotlib.pyplot as plt
-from matplotlib.animation import ArtistAnimation
+from matplotlib.animation import FuncAnimation
 
 
 class weights_visualization_callback(callbacks.Callback):
@@ -30,46 +30,54 @@ class weights_visualization_callback(callbacks.Callback):
 class weights_history_visualizer:
     def __init__(self, all_weights_history):
         self.all_weights_history = all_weights_history
+        self.num_of_layers = len(all_weights_history)
         self.animations = []
         pass
 
-    def animate_one_layer(self, weights_history):
-        fig, ax = plt.subplots(subplot_kw={"projection": "3d"},
-                               figsize=(12, 12))
-        epochs = len(weights_history)
-        input_dim, hidden_dim = weights_history[0].shape
-        plot_X = np.arange(hidden_dim)
-        plot_Y = np.arange(input_dim)
-        plot_X, plot_Y = np.meshgrid(plot_X, plot_Y)
-        v_min = np.array(weights_history).min()
-        v_max = np.array(weights_history).max()
-        print(f"minimum weight: {v_min:.2f}")
-        print(f"maximum weight: {v_max:.2f}")
-        weights_surf = ax.plot_surface(plot_X, plot_Y, weights_history[0],
-                                       cmap='hot',
-                                       vmin=v_min, vmax=v_max)
-        # weights_plot = ax_a.imshow(weights_history[0], cmap='hot',
-        #                            vmin=v_min, vmax=v_max)
-        fig.colorbar(weights_surf, ax=ax, shrink=0.5)
-        ax.set_title("weights in hidden layer over epochs")
-        ax.set_xlabel("hidden layer size")
-        ax.set_ylabel("input dimension")
-        artists = []
-        for i in range(epochs):
-            # container = ax_a.imshow(weights_history[i], cmap='hot')
-            container = ax.plot_surface(plot_X, plot_Y, weights_history[i],
-                                        cmap='hot')
-            epoch_index = ax.annotate(f"Epoch = {(i + 1):d}", xy=(0.1, 0.1),
-                                      xycoords='figure fraction')
-            artists.append([container, epoch_index])
+    def update(self, frame, ax):
+        for j in range(self.num_of_layers):
+            ax[j].cla()
+            weights_history = self.all_weights_history[j]
+            input_dim, hidden_dim = weights_history[0].shape
+            plot_X = np.arange(hidden_dim)
+            plot_Y = np.arange(input_dim)
+            plot_X, plot_Y = np.meshgrid(plot_X, plot_Y)
+            ax[j].plot_surface(plot_X, plot_Y, weights_history[frame],
+                               cmap='hot')
+            ax[j].set_title(f"hidden layer {j + 1}")
+            ax[j].set_xlabel("hidden layer size")
+            ax[j].set_ylabel("input dimension")
 
-        ani = ArtistAnimation(fig=fig, artists=artists, interval=60)
-        self.animations.append(ani)
-        pass
+        ax[0].annotate(f"Epoch = {(frame + 1):d}", xy=(0.1, 0.1),
+                       xycoords='figure fraction')
+        return ax
 
     def visualize(self):
-        for one_weights in self.all_weights_history:
-            self.animate_one_layer(one_weights)
+        fig, ax = plt.subplots(1, self.num_of_layers,
+                               subplot_kw={"projection": "3d"},
+                               figsize=(20, 8))
+        epochs = len(self.all_weights_history[0])
+        fig.suptitle("weights in hidden layer over epochs")
+        for j in range(self.num_of_layers):
+            weights_history = self.all_weights_history[j]
+            input_dim, hidden_dim = weights_history[0].shape
+            plot_X = np.arange(hidden_dim)
+            plot_Y = np.arange(input_dim)
+            plot_X, plot_Y = np.meshgrid(plot_X, plot_Y)
+            v_min = np.array(weights_history).min()
+            v_max = np.array(weights_history).max()
+            print(f"minimum weight: {v_min:.2f}")
+            print(f"maximum weight: {v_max:.2f}")
+            weights_surf = ax[j].plot_surface(plot_X, plot_Y,
+                                              weights_history[0],
+                                              cmap='hot',
+                                              vmin=v_min, vmax=v_max)
+            fig.colorbar(weights_surf, ax=ax[j], shrink=0.5)
+
+        ani = FuncAnimation(fig=fig, func=self.update, fargs=(ax,),
+                            frames=epochs, interval=30)
+        self.animations.append(ani)
+
         plt.show()
 
         pass
