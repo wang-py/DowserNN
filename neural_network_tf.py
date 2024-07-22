@@ -145,6 +145,38 @@ def plot_loss_history(history):
     plt.show()
 
 
+def build_NN(num_of_layers, N, input_dim, hidden_dim, learning_rate):
+    model = Sequential()
+    model.add(
+        Dense(
+            hidden_dim,
+            activation="relu",
+            kernel_initializer="he_normal",
+            bias_initializer='zeros'
+        )
+    )
+    i = 1
+    while (i < num_of_layers - 1):
+        model.add(
+            Dense(
+                int(hidden_dim / (i * 2)),
+                activation="relu",
+                kernel_initializer="he_normal",
+                bias_initializer='zeros'
+            )
+        )
+        i += 1
+    model.add(Dense(2, activation="softmax"))
+
+    # Compile the model
+    model.compile(optimizer=Adam(learning_rate=learning_rate),
+                  loss="binary_crossentropy", metrics=['accuracy'])
+    model.build((N, input_dim))
+
+    model.summary()
+    return model
+
+
 if __name__ == "__main__":
     # Generate training and validation data
     X_file = sys.argv[1]
@@ -168,49 +200,11 @@ if __name__ == "__main__":
     X_test = tf.convert_to_tensor(X[training_N:, :])
     y_test = tf.convert_to_tensor(y[training_N:, :])
     # record weights during each training iteration
-    callback = weights_visualization_callback(num_of_layers=5)
     # Create a neural network model
-    model = Sequential()
-    model.add(
-        Dense(
-            hidden_dim,
-            activation="relu",
-            kernel_initializer="he_normal",
-            bias_initializer='zeros'
-        )
-    )
-    model.add(
-        Dense(
-            64,
-            activation="relu",
-            kernel_initializer="he_normal",
-            bias_initializer='zeros'
-        )
-    )
-    model.add(
-        Dense(
-            32,
-            activation="relu",
-            kernel_initializer="he_normal",
-            bias_initializer='zeros'
-        )
-    )
-    model.add(
-        Dense(
-            16,
-            activation="relu",
-            kernel_initializer="he_normal",
-            bias_initializer='zeros'
-        )
-    )
-    model.add(Dense(2, activation="softmax"))
-
-    # Compile the model
-    model.compile(optimizer=Adam(learning_rate=0.0005),
-                  loss="binary_crossentropy", metrics=['accuracy'])
-    model.build((N, input_dim))
-
-    model.summary()
+    num_of_layers = 2
+    callback = weights_visualization_callback(num_of_layers)
+    model = build_NN(num_of_layers, N, input_dim, hidden_dim,
+                     learning_rate=0.001)
     epochs = 20
     # Train the model
     history = model.fit(X_data, y_data, epochs=epochs, batch_size=32,
