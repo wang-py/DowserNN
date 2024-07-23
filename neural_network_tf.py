@@ -1,5 +1,6 @@
 import numpy as np
 import sys
+import os
 from keras.models import Sequential
 from keras.layers import Dense
 from keras.optimizers import Adam
@@ -7,6 +8,12 @@ from keras import callbacks
 import tensorflow as tf
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
+
+# make sure results are reproducible
+seed_val = 1029
+os.environ['PYTHONHASHSEED'] = str(seed_val)
+np.random.seed(seed_val)
+tf.random.set_seed(seed_val)
 
 
 class weights_visualization_callback(callbacks.Callback):
@@ -185,8 +192,8 @@ if __name__ == "__main__":
     # Generate training and validation data
     X_file = sys.argv[1]
     y_file = sys.argv[2]
-    X_yes_file = sys.argv[3]
-    y_yes_file = sys.argv[4]
+    X_yes_file = X_file.split('.')[0] + '_yes.npy'
+    y_yes_file = y_file.split('.')[0] + '_yes.npy'
     X = np.load(X_file)
     y = np.load(y_file)
     X_yes = np.load(X_yes_file)
