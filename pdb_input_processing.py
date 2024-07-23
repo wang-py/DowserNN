@@ -384,8 +384,8 @@ if __name__ == '__main__':
     total_time = ending_time - starting_time
     print(f"Data processing took {total_time:.2f} seconds")
     training_X, training_y = randomize_training_data(training_X, training_y)
-    np.save(f'test_data/{pdb_name}_CI_yes_X.npy', training_yes_X)
-    np.save(f'test_data/{pdb_name}_CI_yes_y.npy', training_yes_y)
+    np.save(f'test_data/{pdb_name}_CI_X_yes.npy', training_yes_X)
+    np.save(f'test_data/{pdb_name}_CI_y_yes.npy', training_yes_y)
     np.save(f'test_data/{pdb_name}_CI_X.npy', training_X)
     np.save(f'test_data/{pdb_name}_CI_y.npy', training_y)
 
