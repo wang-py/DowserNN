@@ -111,9 +111,7 @@ class weights_history_visualizer:
         pass
 
 
-def plot_model_accuracy(model, X_validate, y_validate):
-    y_predicted = model.predict(X_validate)
-    accuracy_values = get_model_accuracy(y_validate, y_predicted)
+def plot_model_accuracy(accuracy_values):
     accuracy_threshold = 0.9
     num_above_threshold = np.sum(accuracy_values > accuracy_threshold)
     num_of_water = accuracy_values.shape[0]
@@ -130,15 +128,24 @@ def plot_model_accuracy(model, X_validate, y_validate):
     pass
 
 
-def get_model_accuracy(y_expected, y_predicted):
-    assert y_expected.shape[0] == y_predicted.shape[0]
-    y_expected = np.array(y_expected)
+def get_model_accuracy(model, X_validate, y_validate):
+    y_predicted = model.predict(X_validate)
+    assert y_validate.shape[0] == y_predicted.shape[0]
+    y_validate = np.array(y_validate)
     y_predicted = np.array(y_predicted)
-    accuracy_values = np.zeros(y_expected.shape[0])
+    accuracy_values = np.zeros(y_validate.shape[0])
     for i in range(accuracy_values.shape[0]):
-        accuracy_values[i] = y_predicted[i].dot(y_expected[i].T)
+        accuracy_values[i] = y_predicted[i].dot(y_validate[i].T)
 
-    return np.sort(accuracy_values)
+    return accuracy_values
+
+
+def get_low_accuracy_waters(accuracy_values):
+    accuracy_threshold = 0.8
+    water_index = np.where(accuracy_values < accuracy_threshold)[0]
+    print(f"{water_index.shape[0]} waters have accuracy lower than" +
+          f" {accuracy_threshold}")
+    print("water indices:", water_index)
 
 
 def plot_loss_history(history):
@@ -239,10 +246,12 @@ if __name__ == "__main__":
     plot_loss_history(history)
 
     # plot confidence for water molecules
-    plot_model_accuracy(model, X_validate, y_validate)
+    accuracy_values = get_model_accuracy(model, X_validate, y_validate)
+    get_low_accuracy_waters(accuracy_values)
+    plot_model_accuracy(np.sort(accuracy_values))
 
     # visualizing weights
     weights_history = callback.get_weights()
     weights_visualizer = weights_history_visualizer(weights_history)
     weights_visualizer.visualize()
-    weights_visualizer.save('layer_visualization.mp4')
+    # weights_visualizer.save('layer_visualization.mp4')
