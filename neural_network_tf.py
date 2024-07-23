@@ -93,10 +93,14 @@ class weights_history_visualizer:
 
         ani = FuncAnimation(fig=fig, func=self.update, fargs=(ax, ),
                             frames=epochs, interval=30)
-        self.animations.append(ani)
+        self.animations = ani
 
         plt.show()
 
+        pass
+
+    def save(self, filename):
+        self.animations.save(filename, fps=15)
         pass
 
 
@@ -205,7 +209,7 @@ if __name__ == "__main__":
     callback = weights_visualization_callback(num_of_layers)
     model = build_NN(num_of_layers, N, input_dim, hidden_dim,
                      learning_rate=0.001)
-    epochs = 20
+    epochs = 30
     # Train the model
     history = model.fit(X_data, y_data, epochs=epochs, batch_size=32,
                         callbacks=callback)
@@ -234,3 +238,4 @@ if __name__ == "__main__":
     weights_history = callback.get_weights()
     weights_visualizer = weights_history_visualizer(weights_history)
     weights_visualizer.visualize()
+    weights_visualizer.save('layer_visualization.mp4')
