@@ -146,6 +146,7 @@ def get_low_accuracy_waters(accuracy_values):
     print(f"{water_index.shape[0]} waters have accuracy lower than" +
           f" {accuracy_threshold}")
     print("water indices:", water_index)
+    np.savetxt('low_accuracy_water.txt', water_index, fmt='%d')
 
 
 def plot_loss_history(history):
