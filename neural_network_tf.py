@@ -178,7 +178,7 @@ def build_NN(num_of_layers, N, input_dim, hidden_dim, learning_rate):
     while (i < num_of_layers - 1):
         model.add(
             Dense(
-                int(hidden_dim / (i * 2)),
+                int(hidden_dim / (2 ** i)),
                 activation="relu",
                 kernel_initializer="he_normal",
                 bias_initializer='zeros'
@@ -252,7 +252,7 @@ if __name__ == "__main__":
     plot_model_accuracy(np.sort(accuracy_values))
 
     # visualizing weights
-    weights_history = callback.get_weights()
-    weights_visualizer = weights_history_visualizer(weights_history)
-    weights_visualizer.visualize()
+    # weights_history = callback.get_weights()
+    # weights_visualizer = weights_history_visualizer(weights_history)
+    # weights_visualizer.visualize()
     # weights_visualizer.save('layer_visualization.mp4')
