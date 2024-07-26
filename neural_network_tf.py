@@ -1,19 +1,17 @@
 import numpy as np
 import sys
-import os
 from keras.models import Sequential
 from keras.layers import Dense
 from keras.optimizers import Adam
 from keras import callbacks
+from keras import utils
 import tensorflow as tf
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 
 # make sure results are reproducible
 seed_val = 1029
-os.environ['PYTHONHASHSEED'] = str(seed_val)
-np.random.seed(seed_val)
-tf.random.set_seed(seed_val)
+utils.set_random_seed(seed_val)
 
 
 class weights_visualization_callback(callbacks.Callback):
