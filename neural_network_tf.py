@@ -52,7 +52,7 @@ def get_low_accuracy_waters(accuracy_values):
     np.savetxt('low_accuracy_water.txt', water_index, fmt='%d')
 
 
-def plot_loss_history(history):
+def plot_loss_history(history, test_loss):
     fig, ax = plt.subplots(figsize=(8, 6))
     ax.plot(history.history['loss'], label='cross entropy')
     ax.set_xlabel('Epoch')
@@ -147,7 +147,7 @@ if __name__ == "__main__":
     # error_percent = np.sum(y_validate - y_test) / np.sum(y_test)
 
     # plot training loss
-    plot_loss_history(history)
+    plot_loss_history(history, test_loss)
 
     # plot confidence for water molecules
     accuracy_values = get_model_accuracy(model, X_validate, y_validate)
