@@ -23,13 +23,28 @@ class weights_visualization_callback(callbacks.Callback):
 
 
 class weights_history_visualizer:
-    def __init__(self, all_weights_history):
+    def __init__(self, all_weights_history, mode='3d'):
         self.all_weights_history = all_weights_history
         self.num_of_layers = len(all_weights_history)
+        self.mode = mode
         self.animations = []
         pass
 
-    def update(self, frame, ax):
+    def update_2d(self, frame, ax):
+        for j in range(self.num_of_layers):
+            ax[j].cla()
+            weights_history = self.all_weights_history[j]
+            ax[j].imshow(weights_history[frame],
+                         cmap='hot')
+            ax[j].set_title(f"hidden layer {j + 1}")
+            ax[j].set_xlabel("hidden layer size")
+            ax[j].set_ylabel("input dimension")
+
+        ax[0].annotate(f"Epoch = {(frame + 1):d}", xy=(0.1, 0.1),
+                       xycoords='figure fraction')
+        return ax
+
+    def update_3d(self, frame, ax):
         for j in range(self.num_of_layers - 1):
             ax[j].cla()
             weights_history = self.all_weights_history[j]
@@ -53,6 +68,41 @@ class weights_history_visualizer:
         return ax
 
     def visualize(self):
+        if self.mode == '3d':
+            self.visualize_3d()
+        elif self.mode == '2d':
+            self.visualize_2d()
+
+    def visualize_2d(self):
+        fig, ax = plt.subplots(1, self.num_of_layers,
+                               figsize=(6 * self.num_of_layers, 8))
+        fig.suptitle("weights in hidden layer over epochs")
+        epochs = len(self.all_weights_history[0])
+        # initialize plots
+        for j in range(self.num_of_layers):
+            ax[j].remove()
+            ax[j] = fig.add_subplot(1, self.num_of_layers, j + 1)
+            weights_history = self.all_weights_history[j]
+            input_dim, hidden_dim = weights_history[0].shape
+            plot_X = np.arange(hidden_dim)
+            plot_Y = np.arange(input_dim)
+            plot_X, plot_Y = np.meshgrid(plot_X, plot_Y)
+            v_min = np.array(weights_history).min()
+            v_max = np.array(weights_history).max()
+            print(f"minimum weight: {v_min:.2f}")
+            print(f"maximum weight: {v_max:.2f}")
+            weights_grid = ax[j].imshow(weights_history[0], cmap='hot')
+            fig.colorbar(weights_grid, ax=ax[j], shrink=0.5)
+
+        ani = FuncAnimation(fig=fig, func=self.update_2d, fargs=(ax, ),
+                            frames=epochs, interval=30)
+        self.animations = ani
+
+        plt.show()
+
+        pass
+
+    def visualize_3d(self):
         fig, ax = plt.subplots(1, self.num_of_layers,
                                figsize=(6 * self.num_of_layers, 8))
         fig.suptitle("weights in hidden layer over epochs")
