@@ -136,7 +136,7 @@ class weights_history_visualizer:
         weights_grid = ax[-1].imshow(last_layer_w[0], cmap='hot')
         fig.colorbar(weights_grid, ax=ax[-1], shrink=0.5)
 
-        ani = FuncAnimation(fig=fig, func=self.update, fargs=(ax, ),
+        ani = FuncAnimation(fig=fig, func=self.update_3d, fargs=(ax, ),
                             frames=epochs, interval=30)
         self.animations = ani
 
