@@ -1,6 +1,9 @@
 import sys
+import matplotlib.pyplot as plt
 from keras.layers import Input, Dense
 from keras.models import Model
+from training_visualization import weights_visualization_callback
+from training_visualization import weights_history_visualizer
 
 if __name__ == "__main__":
     # Define the dimensions of the input data
@@ -20,6 +23,9 @@ if __name__ == "__main__":
     decoded = Dense(128, activation="relu")(decoded)
     decoded = Dense(input_dim, activation="sigmoid")(decoded)
 
+    # callback for visualization
+    num_of_layers = 6
+    callback = weights_visualization_callback(num_of_layers)
     # Define the autoencoder model
     autoencoder = Model(inputs=input_layer, outputs=decoded)
 
@@ -28,6 +34,7 @@ if __name__ == "__main__":
 
     # Compile the autoencoder model
     autoencoder.compile(optimizer="adam", loss="binary_crossentropy")
+    autoencoder.summary()
 
     # Train the autoencoder model
     from keras.datasets import mnist
@@ -40,17 +47,23 @@ if __name__ == "__main__":
     x_train = x_train.reshape((len(x_train), input_dim))
     x_test = x_test.reshape((len(x_test), input_dim))
 
-    autoencoder.fit(
+    history = autoencoder.fit(
         x_train,
         x_train,
         epochs=50,
         batch_size=256,
         shuffle=True,
         validation_data=(x_test, x_test),
+        callbacks=callback
     )
 
+    plt.plot(history.history['loss'], label='cross entropy')
+    plt.show()
     # Use the encoder to compress the data
     compressed_data = encoder.predict(x_test)
 
     # Use the autoencoder to reconstruct the data
     reconstructed_data = autoencoder.predict(x_test)
+    weights_history = callback.get_weights()
+    weights_visualizer = weights_history_visualizer(weights_history, mode='2d')
+    weights_visualizer.visualize()
