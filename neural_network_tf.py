@@ -110,7 +110,7 @@ if __name__ == "__main__":
     X_yes = np.load(X_yes_file)
     y_yes = np.load(y_yes_file)
 
-    training_N = int(X.shape[0] * 0.8)  # int(33000)
+    training_N = int(X.shape[0])  # int(33000)
     X_data = tf.convert_to_tensor(X[:training_N, :])
     y_data = tf.convert_to_tensor(y[:training_N, :])
     X_validate = tf.convert_to_tensor(X_yes)
