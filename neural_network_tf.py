@@ -52,7 +52,7 @@ def get_low_accuracy_waters(accuracy_values):
     np.savetxt('low_accuracy_water.txt', water_index, fmt='%d')
 
 
-def plot_loss_history(history, test_loss):
+def plot_loss_history(history, training_loss, test_loss):
     fig, ax = plt.subplots(figsize=(8, 6))
     ax.plot(history.history['loss'], label='cross entropy')
     ax.set_xlabel('Epoch')
@@ -110,13 +110,13 @@ if __name__ == "__main__":
     X_yes = np.load(X_yes_file)
     y_yes = np.load(y_yes_file)
 
-    training_N = int(X.shape[0])  # int(33000)
+    training_N = int(X.shape[0] * 0.8)  # int(33000)
     X_data = tf.convert_to_tensor(X[:training_N, :])
     y_data = tf.convert_to_tensor(y[:training_N, :])
     X_validate = tf.convert_to_tensor(X_yes)
     y_validate = tf.convert_to_tensor(y_yes)
     input_dim = X_data.shape[1]
-    hidden_dim = 32
+    hidden_dim = 64
     N = X_data.shape[0]
 
     X_test = tf.convert_to_tensor(X[training_N:, :])
@@ -147,7 +147,7 @@ if __name__ == "__main__":
     # error_percent = np.sum(y_validate - y_test) / np.sum(y_test)
 
     # plot training loss
-    plot_loss_history(history, test_loss)
+    plot_loss_history(history, training_loss, test_loss)
 
     # plot confidence for water molecules
     accuracy_values = get_model_accuracy(model, X_validate, y_validate)
