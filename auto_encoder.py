@@ -5,6 +5,7 @@ import tensorflow as tf
 from keras.optimizers import Adam
 from keras.layers import Input, Dense
 from keras.models import Model
+import keras.losses
 from keras import utils
 from training_visualization import weights_visualization_callback
 from training_visualization import weights_history_visualizer
@@ -21,8 +22,7 @@ if __name__ == "__main__":
     training_N = int(X.shape[0] * 0.8)  # int(33000)
     X_data = tf.convert_to_tensor(X[:training_N, :])
     input_dim = X_data.shape[1]
-    hidden_dim = 128
-    encoding_dim = 32
+    encoding_dim = 8
     N = X_data.shape[0]
 
     X_test = tf.convert_to_tensor(X[training_N:, :])
@@ -60,9 +60,9 @@ if __name__ == "__main__":
     history = autoencoder.fit(
         X_data,
         X_data,
-        epochs=50,
+        epochs=200,
         batch_size=256,
-        shuffle=True,
+        shuffle=False,
         validation_data=(X_test, X_test),
         callbacks=callback
     )
@@ -70,10 +70,13 @@ if __name__ == "__main__":
     plt.plot(history.history['loss'], label='cross entropy')
     plt.show()
     # Use the encoder to compress the data
-    # compressed_data = encoder.predict(x_test)
+    compressed_data = encoder.predict(X_data)
 
     # Use the autoencoder to reconstruct the data
-    # reconstructed_data = autoencoder.predict(x_test)
+    reconstructed_data = autoencoder.predict(X_data)
+    reconstruction_error = keras.losses.\
+        mean_absolute_percentage_error(X_data, reconstructed_data)
+    print(f"reconstruction error: {reconstruction_error}")
     weights_history = callback.get_weights()
     weights_visualizer = weights_history_visualizer(weights_history, mode='2d')
     weights_visualizer.visualize()
