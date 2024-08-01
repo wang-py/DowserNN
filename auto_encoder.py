@@ -28,7 +28,7 @@ if __name__ == "__main__":
     training_N = int(X.shape[0])  # int(33000)
     X_data = tf.convert_to_tensor(X[:training_N, :])
     input_dim = X_data.shape[1]
-    encoding_dim = 8
+    encoding_dim = 16
     N = X_data.shape[0]
 
     X_test = tf.convert_to_tensor(X[training_N:, :])
@@ -66,7 +66,7 @@ if __name__ == "__main__":
     history = autoencoder.fit(
         X_data,
         X_data,
-        epochs=400,
+        epochs=500,
         batch_size=64,
         shuffle=False,
         # validation_data=(X_test, X_test),
@@ -85,4 +85,4 @@ if __name__ == "__main__":
     print(f"reconstruction error: {reconstruction_error}")
     weights_history = callback.get_weights()
     weights_visualizer = weights_history_visualizer(weights_history, mode='2d')
-    weights_visualizer.visualize()
+    weights_visualizer.visualize(interval=10)
