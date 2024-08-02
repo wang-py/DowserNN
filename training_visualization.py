@@ -67,13 +67,13 @@ class weights_history_visualizer:
         ax[-1].set_ylabel("input dimension")
         return ax
 
-    def visualize(self):
+    def visualize(self, interval=1):
         if self.mode == '3d':
-            self.visualize_3d()
+            self.visualize_3d(interval)
         elif self.mode == '2d':
-            self.visualize_2d()
+            self.visualize_2d(interval)
 
-    def visualize_2d(self):
+    def visualize_2d(self, interval):
         fig, ax = plt.subplots(1, self.num_of_layers,
                                figsize=(6 * self.num_of_layers, 8))
         fig.suptitle("weights in hidden layer over epochs")
@@ -95,14 +95,14 @@ class weights_history_visualizer:
             fig.colorbar(weights_grid, ax=ax[j], shrink=0.5)
 
         ani = FuncAnimation(fig=fig, func=self.update_2d, fargs=(ax, ),
-                            frames=epochs, interval=30)
+                            frames=range(0, epochs, interval), interval=30)
         self.animations = ani
 
         plt.show()
 
         pass
 
-    def visualize_3d(self):
+    def visualize_3d(self, interval):
         fig, ax = plt.subplots(1, self.num_of_layers,
                                figsize=(6 * self.num_of_layers, 8))
         fig.suptitle("weights in hidden layer over epochs")
@@ -137,7 +137,7 @@ class weights_history_visualizer:
         fig.colorbar(weights_grid, ax=ax[-1], shrink=0.5)
 
         ani = FuncAnimation(fig=fig, func=self.update_3d, fargs=(ax, ),
-                            frames=epochs, interval=30)
+                            frames=range(0, epochs, interval), interval=30)
         self.animations = ani
 
         plt.show()

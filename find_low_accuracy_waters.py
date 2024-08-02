@@ -5,12 +5,16 @@ import sys
 
 def get_low_accuracy_waters(input_pdb, water_index_file):
     pdb = open(input_pdb)
-    water_index = np.loadtxt(water_index_file, dtype=int)
+    water_data = np.loadtxt(water_index_file, dtype=str)
+    water_index = water_data[:, 0].astype(int)
+    water_accuracy = water_data[:, 1].astype(float)
     water_info = [line for line in pdb.readlines() if
                   line.startswith('HETATM') and 'HOH' in line]
     low_accuracy_waters = []
-    for i in water_index:
-        low_accuracy_waters.append(water_info[i])
+    for i in range(water_index.shape[0]):
+        one_water = water_info[i][0:61] + f"{water_accuracy[i]:1.2f} " +\
+                water_info[i][66:]
+        low_accuracy_waters.append(one_water)
 
     return low_accuracy_waters
 

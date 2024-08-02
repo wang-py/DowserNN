@@ -48,8 +48,11 @@ def get_low_accuracy_waters(accuracy_values):
     water_index = np.where(accuracy_values < accuracy_threshold)[0]
     print(f"{water_index.shape[0]} waters have accuracy lower than" +
           f" {accuracy_threshold}")
-    print("water indices:", water_index)
-    np.savetxt('low_accuracy_water.txt', water_index, fmt='%d')
+    entry = []
+    for i in range(len(water_index)):
+        entry.append(f"{water_index[i]} {accuracy_values[water_index[i]]}")
+        print(f"water indices: {water_index[i]} : {accuracy_values[water_index[i]]}")
+    np.savetxt('low_accuracy_water.txt', np.array(entry), fmt='%s')
 
 
 def plot_loss_history(history, training_loss, test_loss):
@@ -127,7 +130,7 @@ if __name__ == "__main__":
     callback = weights_visualization_callback(num_of_layers)
     model = build_NN(num_of_layers, N, input_dim, hidden_dim,
                      learning_rate=0.001)
-    epochs = 100
+    epochs = 200
     # Train the model
     history = model.fit(X_data, y_data, epochs=epochs, batch_size=32,
                         callbacks=callback)
@@ -153,9 +156,10 @@ if __name__ == "__main__":
     accuracy_values = get_model_accuracy(model, X_validate, y_validate)
     get_low_accuracy_waters(accuracy_values)
     plot_model_accuracy(np.sort(accuracy_values))
+    print(np.sort(accuracy_values)[0])
 
     # visualizing weights
     weights_history = callback.get_weights()
-    weights_visualizer = weights_history_visualizer(weights_history)
-    weights_visualizer.visualize()
-    # weights_visualizer.save('layer_visualization.mp4')
+    weights_visualizer = weights_history_visualizer(weights_history, mode='2d')
+    weights_visualizer.visualize(interval=10)
+    # weights_visualizer.save('layer_visualization_8OM1.mp4')
