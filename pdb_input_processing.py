@@ -8,7 +8,8 @@ residue_types = {'ALA': 1, 'ARG': 2, 'ASP': 3, 'ASN': 4, 'CYS': 5, 'GLU': 6,
                  'PHE': 13, 'PRO': 14, 'SEC': 15, 'SER': 16, 'THR': 17,
                  'TYR': 18, 'TRP': 19, 'VAL': 20, 'HOH': 21}  # , 'OTHERS': 22}
 
-atom_types = {'C': 1, 'N': 2, 'O': 3, 'S': 4, 'H': 5}  # , 'Others': 6}
+atom_types = {'C': 1, 'N': 2, 'O': 3, 'SD': 4, 'H': 5, 'CA': 6, 'CB': 7,
+              'CG': 8, 'CD1': 9, 'CD2': 10, 'CE1': 11, 'CE2': 12, 'CZ': 13}
 
 
 def get_internal_coords(relative_coors):
@@ -333,7 +334,7 @@ def read_pdb(input_pdb):
         one_data = np.array([])
         xyz = [float(x) for x in line[30:53].split()]
         # read in the atom name
-        atom_type = str(line[76:78]).strip()
+        atom_type = str(line[13:16]).strip()
         res_type = str(line[17:20]).strip()
         try:
             atom_encode = feature_encoder_atom(atom_types[atom_type])
@@ -371,6 +372,7 @@ if __name__ == '__main__':
     input_pdb = sys.argv[1]
     pdb_name = os.path.basename(input_pdb).split('.')[0]
     water_data, protein_data = read_pdb(input_pdb)
+    # print(atom_types)
     total_data = np.append(water_data, protein_data, axis=0)
     print("Generating training data...")
     starting_time = timeit.default_timer()
