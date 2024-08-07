@@ -210,12 +210,15 @@ def check_num_of_protein_atoms(atoms_partitions, atoms):
     return False
 
 
-def generate_training_no_X(atoms, n):
+def generate_training_no_X(atoms, cavities, n):
     """
     Generate X training data for no cases for neural network
     ----------------------------------------------------------------------------
     atoms: ndarray N x 7
     Array of other atoms' information
+
+    cavities: ndarray N x 3
+    Array of cavity points in xyz
 
     n: int
     Number of closest atoms
@@ -234,11 +237,11 @@ def generate_training_no_X(atoms, n):
     #     print("Atom count error")
     #     exit()
     # num_of_partitions = len(atoms_partitions)
-    P = atoms.shape[0]
+    C = cavities.shape[0]
     HOH_encoding = feature_encoder_residue(residue_types['HOH'])
     training_X = []
-    for i in range(P):
-        n_nearest_atoms = find_n_nearest_atoms(atoms[i], atoms, n)
+    for i in range(C):
+        n_nearest_atoms = find_n_nearest_atoms(cavities[i], atoms, n)
         HOH_check = n_nearest_atoms[:, 2:4] - HOH_encoding
         if not np.any(HOH_check == 0.0):
             internal_coords = get_internal_coords(
@@ -362,6 +365,28 @@ def read_pdb(input_pdb):
     return np.array(water_data), np.array(protein_data)
 
 
+def read_cavities(cavities_pdb):
+    """
+    reads a pdb file and returns numpy array of cavity data
+    ----------------------------------------------------------------------------
+    cavities_pdb: str
+    path to pdb file
+    ----------------------------------------------------------------------------
+    Returns:
+    cavities_data: ndarray: N x 3
+    """
+    # read in the pdb file
+    pdb_file = open(cavities_pdb)
+    cav_info = [line for line in pdb_file.readlines() if
+                line.startswith('HETATM')]
+    cavities_data = []
+    for line in cav_info:
+        xyz = [float(x) for x in line[30:53].split()]
+        cavities_data.append(xyz)
+
+    return np.array(cavities_data)
+
+
 def randomize_training_data(training_X, training_y):
     assert training_X.shape[0] == training_y.shape[0]
     p = np.random.permutation(training_X.shape[0])
@@ -369,16 +394,23 @@ def randomize_training_data(training_X, training_y):
 
 
 if __name__ == '__main__':
-    input_pdb = sys.argv[1]
+    try:
+        input_pdb = sys.argv[1]
+        input_cavities = sys.argv[2]
+    except IndexError:
+        print("Usage: python pdb_input_processing.py input_pdb input_cavities")
+        exit()
     pdb_name = os.path.basename(input_pdb).split('.')[0]
     water_data, protein_data = read_pdb(input_pdb)
+    cavities_data = read_cavities(input_cavities)
     # print(atom_types)
     total_data = np.append(water_data, protein_data, axis=0)
     print("Generating training data...")
     starting_time = timeit.default_timer()
     training_yes_X = generate_training_yes_X(water_data, total_data, n=10)
     training_yes_y = generate_training_yes_y(water_data.shape[0])
-    training_no_X = generate_training_no_X(total_data, n=10)
+    training_no_X = generate_training_no_X(total_data, cavities_data, n=10)
+    print("number of no cases: %d" % training_no_X.shape[0])
     training_no_y = generate_training_no_y(training_no_X.shape[0])
     training_X = np.append(training_yes_X, training_no_X, axis=0)
     training_y = np.append(training_yes_y, training_no_y, axis=0)
