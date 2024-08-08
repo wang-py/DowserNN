@@ -245,7 +245,7 @@ def generate_training_no_X(atoms, cavities, n):
         HOH_check = n_nearest_atoms[:, 2:4] - HOH_encoding
         if not np.any(HOH_check == 0.0):
             internal_coords = get_internal_coords(
-                    n_nearest_atoms[:, -4:-1] - atoms[i, -3:])
+                    n_nearest_atoms[:, -4:-1] - cavities[i, -3:])
             one_training_X = np.append(n_nearest_atoms[:, 0:4],
                                        internal_coords, axis=1)
             training_X.append(one_training_X.flatten())
