@@ -51,7 +51,7 @@ def get_low_accuracy_waters(accuracy_values):
     entry = []
     for i in range(len(water_index)):
         entry.append(f"{water_index[i]} {accuracy_values[water_index[i]]}")
-        print(f"water indices: {water_index[i]} : {accuracy_values[water_index[i]]}")
+        # print(f"water indices: {water_index[i]} : {accuracy_values[water_index[i]]}")
     np.savetxt('low_accuracy_water.txt', np.array(entry), fmt='%s')
 
 
@@ -113,13 +113,13 @@ if __name__ == "__main__":
     X_yes = np.load(X_yes_file)
     y_yes = np.load(y_yes_file)
 
-    training_N = int(X.shape[0])  # int(33000)
+    training_N = int(X.shape[0] * 0.8)  # int(33000)
     X_data = tf.convert_to_tensor(X[:training_N, :])
     y_data = tf.convert_to_tensor(y[:training_N, :])
     X_validate = tf.convert_to_tensor(X_yes)
     y_validate = tf.convert_to_tensor(y_yes)
     input_dim = X_data.shape[1]
-    hidden_dim = 128
+    hidden_dim = 64
     N = X_data.shape[0]
 
     X_test = tf.convert_to_tensor(X[training_N:, :])
@@ -156,10 +156,10 @@ if __name__ == "__main__":
     accuracy_values = get_model_accuracy(model, X_validate, y_validate)
     get_low_accuracy_waters(accuracy_values)
     plot_model_accuracy(np.sort(accuracy_values))
-    print(np.sort(accuracy_values)[0])
+    # print(np.sort(accuracy_values)[0])
 
     # visualizing weights
     weights_history = callback.get_weights()
     weights_visualizer = weights_history_visualizer(weights_history, mode='2d')
-    weights_visualizer.visualize(interval=10)
+    weights_visualizer.visualize(interval=10, frametime=200)
     # weights_visualizer.save('layer_visualization_8OM1.mp4')
