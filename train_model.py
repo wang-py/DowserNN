@@ -140,7 +140,7 @@ if __name__ == "__main__":
         print("No exising model found, creating a new model")
         model = build_NN(num_of_layers, N, input_dim, hidden_dim,
                          learning_rate=0.0005)
-    epochs = 100
+    epochs = 150
     # Train the model
     history = model.fit(X_data, y_data, epochs=epochs, batch_size=32,
                         callbacks=callback)
