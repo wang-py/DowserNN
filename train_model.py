@@ -118,27 +118,28 @@ if __name__ == "__main__":
     X_yes = np.load(X_yes_file)
     y_yes = np.load(y_yes_file)
 
-    training_N = int(X.shape[0] * 0.8)  # int(33000)
+    training_N = int(X.shape[0])  # int(33000)
     X_data = tf.convert_to_tensor(X[:training_N, :])
     y_data = tf.convert_to_tensor(y[:training_N, :])
     X_validate = tf.convert_to_tensor(X_yes)
     y_validate = tf.convert_to_tensor(y_yes)
     input_dim = X_data.shape[1]
-    hidden_dim = 64
+    hidden_dim = 128
     N = X_data.shape[0]
 
     X_test = tf.convert_to_tensor(X[training_N:, :])
     y_test = tf.convert_to_tensor(y[training_N:, :])
     # record weights during each training iteration
     # Create a neural network model
-    num_of_layers = 2
+    num_of_layers = 4
     callback = weights_visualization_callback(num_of_layers)
     try:
         model = saving.load_model('test_data/DowserNN.keras')
+        model.summary()
     except ValueError:
         print("No exising model found, creating a new model")
         model = build_NN(num_of_layers, N, input_dim, hidden_dim,
-                         learning_rate=0.001)
+                         learning_rate=0.0005)
     epochs = 100
     # Train the model
     history = model.fit(X_data, y_data, epochs=epochs, batch_size=32,
