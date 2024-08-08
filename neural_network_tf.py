@@ -4,6 +4,7 @@ from keras.models import Sequential
 from keras.layers import Dense
 from keras.optimizers import Adam
 from keras import utils
+from keras import saving
 from training_visualization import weights_visualization_callback
 from training_visualization import weights_history_visualizer
 import tensorflow as tf
@@ -102,6 +103,10 @@ def build_NN(num_of_layers, N, input_dim, hidden_dim, learning_rate):
     return model
 
 
+def save_model(model, output_filename):
+    model.save(output_filename)
+
+
 if __name__ == "__main__":
     # Generate training and validation data
     X_file = sys.argv[1]
@@ -128,8 +133,12 @@ if __name__ == "__main__":
     # Create a neural network model
     num_of_layers = 2
     callback = weights_visualization_callback(num_of_layers)
-    model = build_NN(num_of_layers, N, input_dim, hidden_dim,
-                     learning_rate=0.001)
+    try:
+        model = saving.load_model('test_data/DowserNN.keras')
+    except ValueError:
+        print("No exising model found, creating a new model")
+        model = build_NN(num_of_layers, N, input_dim, hidden_dim,
+                         learning_rate=0.001)
     epochs = 100
     # Train the model
     history = model.fit(X_data, y_data, epochs=epochs, batch_size=32,
@@ -163,3 +172,5 @@ if __name__ == "__main__":
     weights_visualizer = weights_history_visualizer(weights_history, mode='2d')
     weights_visualizer.visualize(interval=10, frametime=200)
     # weights_visualizer.save('layer_visualization_8OM1.mp4')
+    # save model
+    save_model(model, 'test_data/DowserNN.keras')
