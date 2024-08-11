@@ -1,6 +1,5 @@
 *.pdb
 *.png
 *.txt
-test_data/
 __pycache__/
 .DS_Store
