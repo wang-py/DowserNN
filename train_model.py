@@ -56,17 +56,20 @@ def get_low_accuracy_waters(accuracy_values):
     np.savetxt('low_accuracy_water.txt', np.array(entry), fmt='%s')
 
 
-def plot_loss_history(history, training_loss, test_loss):
+def plot_loss_history(history):
     fig, ax = plt.subplots(figsize=(8, 6))
-    ax.plot(history.history['loss'], label='cross entropy')
+    training_loss = history.history['loss']
+    validation_loss = history.history['val_loss']
+    ax.plot(training_loss, 'b-', label='training loss')
+    ax.plot(validation_loss, 'r-', label='validation loss')
     ax.set_xlabel('Epoch')
     ax.set_ylabel('Loss')
-    ax.axhline(training_loss, color='b', linestyle='--',
-               label='training cross entropy')
-    if test_loss is not None:
-        ax.axhline(test_loss, color='r', linestyle='--',
-                   label='test cross entropy')
-    ax.set_title('Training Loss')
+    # ax.axhline(training_loss, color='b', linestyle='--',
+    #           label='training cross entropy')
+    # if test_loss is not None:
+    #     ax.axhline(test_loss, color='r', linestyle='--',
+    #                label='test cross entropy')
+    ax.set_title('training and validation loss')
     ax.legend()
     plt.show()
 
@@ -117,8 +120,8 @@ if __name__ == "__main__":
     y = np.load(y_file)
     X_yes = np.load(X_yes_file)
     y_yes = np.load(y_yes_file)
-
-    training_N = int(X.shape[0])  # int(33000)
+    # spliting data into training set and testing set
+    training_N = int(X.shape[0] * 0.8)
     X_data = tf.convert_to_tensor(X[:training_N, :])
     y_data = tf.convert_to_tensor(y[:training_N, :])
     X_validate = tf.convert_to_tensor(X_yes)
@@ -139,28 +142,28 @@ if __name__ == "__main__":
     except ValueError:
         print("No exising model found, creating a new model")
         model = build_NN(num_of_layers, N, input_dim, hidden_dim,
-                         learning_rate=0.0005)
-    epochs = 150
+                         learning_rate=0.0008)
+    epochs = 100
     # Train the model
     history = model.fit(X_data, y_data, epochs=epochs, batch_size=32,
-                        callbacks=callback)
+                        validation_data=(X_test, y_test), callbacks=callback)
     np.set_printoptions(precision=4, suppress=True)
     # print("expected output:\n", y_data)
     # print("predicted output:\n", y_predicted)
 
     # test with new data
-    training_loss, training_accuracy = model.evaluate(X_data, y_data)
-    print(f"training loss: {training_loss}")
-    test_loss = None
-    if training_N != X.shape[0]:
-        test_loss, accuracy = model.evaluate(X_test, y_test)
-        print(f"test loss: {test_loss}")  # , test accuracy: {accuracy:.2%}")
+    # training_loss, training_accuracy = model.evaluate(X_data, y_data)
+    # print(f"training loss: {training_loss}")
+    # test_loss = None
+    # if training_N != X.shape[0]:
+    #     test_loss, accuracy = model.evaluate(X_test, y_test)
+    #     print(f"test loss: {test_loss}")  # , test accuracy: {accuracy:.2%}")
     # print("expected output:\n", y_test)
     # print("predicted output:\n", y_validate)
     # error_percent = np.sum(y_validate - y_test) / np.sum(y_test)
 
     # plot training loss
-    plot_loss_history(history, training_loss, test_loss)
+    plot_loss_history(history)
 
     # plot confidence for water molecules
     accuracy_values = get_model_accuracy(model, X_validate, y_validate)
