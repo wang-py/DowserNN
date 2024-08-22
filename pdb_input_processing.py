@@ -426,6 +426,7 @@ if __name__ == '__main__':
     training_yes_X = generate_training_yes_X(water_data, total_data, n=10)
     training_yes_y = generate_training_yes_y(water_data.shape[0])
     training_no_X = generate_training_no_X(total_data, cavities_data, n=10)
+    print("number of yes cases: %d" % training_yes_X.shape[0])
     print("number of no cases: %d" % training_no_X.shape[0])
     training_no_y = generate_training_no_y(training_no_X.shape[0])
     training_X, training_y = combine_training_data(training_yes_X,
