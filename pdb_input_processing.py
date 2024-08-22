@@ -393,6 +393,22 @@ def randomize_training_data(training_X, training_y):
     return training_X[p], training_y[p]
 
 
+def combine_training_data(X_yes, X_no, y_yes, y_no):
+    num_no_cases = y_no.shape[0]
+    num_yes_cases = y_yes.shape[0]
+    training_X = np.append(X_no, X_yes, axis=0)
+    training_y = np.append(y_no, y_yes, axis=0)
+    ratio = int(num_no_cases / num_yes_cases)
+    yes_i = num_no_cases
+    for i in range(num_yes_cases):
+        training_X[[i + ratio, yes_i + i]] = \
+            training_X[[yes_i + i, i + ratio]]
+        training_y[[i + ratio, yes_i + i]] = \
+            training_y[[yes_i + i, i + ratio]]
+
+    return training_X, training_y
+
+
 if __name__ == '__main__':
     try:
         input_pdb = sys.argv[1]
@@ -412,8 +428,12 @@ if __name__ == '__main__':
     training_no_X = generate_training_no_X(total_data, cavities_data, n=10)
     print("number of no cases: %d" % training_no_X.shape[0])
     training_no_y = generate_training_no_y(training_no_X.shape[0])
-    training_X = np.append(training_yes_X, training_no_X, axis=0)
-    training_y = np.append(training_yes_y, training_no_y, axis=0)
+    training_X, training_y = combine_training_data(training_yes_X,
+                                                   training_no_X,
+                                                   training_yes_y,
+                                                   training_no_y)
+    # training_X = np.append(training_yes_X, training_no_X, axis=0)
+    # training_y = np.append(training_yes_y, training_no_y, axis=0)
     ending_time = timeit.default_timer()
     total_time = ending_time - starting_time
     print(f"Data processing took {total_time:.2f} seconds")
