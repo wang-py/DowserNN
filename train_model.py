@@ -112,16 +112,24 @@ def save_model(model, output_filename):
 
 if __name__ == "__main__":
     # Generate training and validation data
-    X_file = sys.argv[1]
-    y_file = sys.argv[2]
+    training_pdb = sys.argv[1]
+    testing_pdb = sys.argv[2]
+    X_file = training_pdb + "_CI_X.npy"
+    y_file = training_pdb + "_CI_y.npy"
+    X_file_test = testing_pdb + "_CI_X.npy"
+    y_file_test = testing_pdb + "_CI_y.npy"
     X_yes_file = X_file.split('.')[0] + '_yes.npy'
     y_yes_file = y_file.split('.')[0] + '_yes.npy'
     X = np.load(X_file)
     y = np.load(y_file)
+    X_test = np.load(X_file_test)
+    y_test = np.load(y_file_test)
+    X_test = tf.convert_to_tensor(X_test)
+    y_test = tf.convert_to_tensor(y_test)
     X_yes = np.load(X_yes_file)
     y_yes = np.load(y_yes_file)
     # spliting data into training set and testing set
-    training_N = int(X.shape[0] * 0.8)
+    training_N = int(X.shape[0])
     X_data = tf.convert_to_tensor(X[:training_N, :])
     y_data = tf.convert_to_tensor(y[:training_N, :])
     X_validate = tf.convert_to_tensor(X_yes)
@@ -130,8 +138,8 @@ if __name__ == "__main__":
     hidden_dim = 128
     N = X_data.shape[0]
 
-    X_test = tf.convert_to_tensor(X[training_N:, :])
-    y_test = tf.convert_to_tensor(y[training_N:, :])
+    # X_test = tf.convert_to_tensor(X[training_N:, :])
+    # y_test = tf.convert_to_tensor(y[training_N:, :])
     # record weights during each training iteration
     # Create a neural network model
     num_of_layers = 4
@@ -142,7 +150,7 @@ if __name__ == "__main__":
     except ValueError:
         print("No exising model found, creating a new model")
         model = build_NN(num_of_layers, N, input_dim, hidden_dim,
-                         learning_rate=0.0008)
+                         learning_rate=0.005)
     epochs = 100
     # Train the model
     history = model.fit(X_data, y_data, epochs=epochs, batch_size=32,
@@ -177,4 +185,4 @@ if __name__ == "__main__":
     weights_visualizer.visualize(interval=10, frametime=200)
     # weights_visualizer.save('layer_visualization_8OM1.mp4')
     # save model
-    save_model(model, 'test_data/DowserNN.keras')
+    # save_model(model, 'test_data/DowserNN.keras')
