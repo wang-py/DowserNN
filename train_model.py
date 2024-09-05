@@ -1,5 +1,6 @@
 import numpy as np
 import sys
+import os
 from keras.models import Sequential
 from keras.layers import Dense
 from keras.optimizers import Adam
@@ -56,12 +57,14 @@ def get_low_accuracy_waters(accuracy_values):
     np.savetxt('low_accuracy_water.txt', np.array(entry), fmt='%s')
 
 
-def plot_loss_history(history):
+def plot_loss_history(history, train_pdb, val_pdb):
     fig, ax = plt.subplots(figsize=(8, 6))
     training_loss = history.history['loss']
     validation_loss = history.history['val_loss']
-    ax.plot(training_loss, 'b-', label='training loss')
-    ax.plot(validation_loss, 'r-', label='validation loss')
+    ax.plot(training_loss, 'b-', label='training loss '
+            + os.path.basename(train_pdb))
+    ax.plot(validation_loss, 'r-', label='validation loss '
+            + os.path.basename(val_pdb))
     ax.set_xlabel('Epoch')
     ax.set_ylabel('Loss')
     # ax.axhline(training_loss, color='b', linestyle='--',
@@ -171,7 +174,7 @@ if __name__ == "__main__":
     # error_percent = np.sum(y_validate - y_test) / np.sum(y_test)
 
     # plot training loss
-    plot_loss_history(history)
+    plot_loss_history(history, training_pdb, testing_pdb)
 
     # plot confidence for water molecules
     accuracy_values = get_model_accuracy(model, X_validate, y_validate)
