@@ -17,7 +17,7 @@ utils.set_random_seed(seed_val)
 
 
 def plot_model_accuracy(accuracy_values):
-    accuracy_threshold = 0.9
+    accuracy_threshold = 0.5
     num_above_threshold = np.sum(accuracy_values > accuracy_threshold)
     num_of_water = accuracy_values.shape[0]
     percent_above_threshold = num_above_threshold / num_of_water
@@ -46,7 +46,7 @@ def get_model_accuracy(model, X_validate, y_validate):
 
 
 def get_low_accuracy_waters(accuracy_values):
-    accuracy_threshold = 0.8
+    accuracy_threshold = 0.5
     water_index = np.where(accuracy_values < accuracy_threshold)[0]
     print(f"{water_index.shape[0]} waters have accuracy lower than" +
           f" {accuracy_threshold}")
@@ -154,7 +154,7 @@ if __name__ == "__main__":
         print("No exising model found, creating a new model")
         model = build_NN(num_of_layers, N, input_dim, hidden_dim,
                          learning_rate=0.0001)
-    epochs = 100
+    epochs = 50
     # Train the model
     history = model.fit(X_data, y_data, epochs=epochs, batch_size=32,
                         validation_data=(X_test, y_test), callbacks=callback)
