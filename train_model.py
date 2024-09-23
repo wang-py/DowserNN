@@ -188,4 +188,4 @@ if __name__ == "__main__":
     weights_visualizer.visualize(interval=10, frametime=200)
     # weights_visualizer.save('layer_visualization_8OM1.mp4')
     # save model
-    # save_model(model, 'test_data/DowserNN.keras')
+    save_model(model, 'test_data/DowserNN.keras')
