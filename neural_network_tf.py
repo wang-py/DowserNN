@@ -14,7 +14,7 @@ def generate_data(num_samples):
 
 # Generate training and validation data
 train_X, train_y = generate_data(1000)
-val_X, val_y = generate_data(200)
+val_X, val_y = train_X[-200:], train_y[-200:]
 
 # Create a neural network model
 model = Sequential()
