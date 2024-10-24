@@ -31,13 +31,21 @@ def plot_rmsd(rmsd):
 def plot_dist(dist):
     water_i = np.arange(len(dist)) + 1
     avg_dist = np.mean(dist)
-    plt.title("water drift after EM")
-    plt.xlabel("water index")
-    plt.ylabel("distance [A]")
-    plt.plot(water_i, dist)
-    plt.axhline(avg_dist, color='k', linestyle='--',
-                label=f"average distance: {avg_dist: .2f}")
-    plt.legend()
+    fig, ax = plt.subplots(1, 2, figsize=(10, 6))
+    ax[0].set_title("water drift after EM")
+    ax[0].set_xlabel("water index")
+    ax[0].set_ylabel("distance [A]")
+    ax[0].scatter(water_i, dist)
+    ax[0].axhline(avg_dist, color='k', linestyle='--',
+                  label=f"average distance: {avg_dist: .2f}")
+    ax[0].legend()
+    ax[1].set_title("distance distribution")
+    ax[1].set_ylabel("frequency")
+    ax[1].set_xlabel("distance [A]")
+    ax[1].hist(dist)
+    ax[1].axvline(avg_dist, color='k', linestyle='--',
+                  label=f"average distance: {avg_dist: .2f}")
+    ax[1].legend()
     plt.show()
     pass
 
