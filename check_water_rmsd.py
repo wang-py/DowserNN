@@ -31,7 +31,8 @@ def plot_rmsd(rmsd):
 def plot_dist(dist):
     water_i = np.arange(len(dist)) + 1
     avg_dist = np.mean(dist)
-    fig, ax = plt.subplots(1, 2, figsize=(10, 6))
+    std_dist = np.std(dist)
+    fig, ax = plt.subplots(1, 2, figsize=(16, 6))
     ax[0].set_title("water drift after EM")
     ax[0].set_xlabel("water index")
     ax[0].set_ylabel("distance [A]")
@@ -44,7 +45,8 @@ def plot_dist(dist):
     ax[1].set_xlabel("distance [A]")
     ax[1].hist(dist)
     ax[1].axvline(avg_dist, color='k', linestyle='--',
-                  label=f"average distance: {avg_dist: .2f}")
+                  label=f"average distance: {avg_dist: .2f} A" +
+                  f" std = {std_dist: .2f} A")
     ax[1].legend()
     plt.show()
     pass
