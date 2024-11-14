@@ -360,7 +360,7 @@ def read_pdb(input_pdb):
         one_data = np.append(one_data, atom_encode)
         one_data = np.append(one_data, residue_encode)
         one_data = np.append(one_data, xyz)
-        if res_type == 'HOH':
+        if res_type == 'HOH' or res_type == 'SOL':
             water_data.append(one_data)
         else:
             protein_data.append(one_data)
