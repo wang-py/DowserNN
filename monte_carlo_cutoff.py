@@ -69,7 +69,7 @@ def plot_energy_and_probabilities(water_energies, water_probabilities):
 
 if __name__ == '__main__':
     input_pdb = sys.argv[1]
-    num_of_trials = 100
+    num_of_trials = 1
     water_energies = get_water_energies_from_pdb(input_pdb)
     water_probabilities = get_water_probability(num_of_trials, water_energies)
     print("the energies of water are:\n", water_energies)
