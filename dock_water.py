@@ -4,13 +4,20 @@ from keras import saving
 import sys
 
 
+def format_water_oxygen_xyz(i, xyz, confidence):
+    x = xyz[0]
+    y = xyz[1]
+    z = xyz[2]
+    entry = f"ATOM  {i+1:d>4}  OW  HOH D 1   {x:8.3f>7}{y:8.3f>7}{z:8.3f>7}" +\
+        f" {confidence:6.2f>5}" + f"{'':<10}" + "O"
+    return entry
+
+
 def dock_water(cavities_xyz, docking_result):
     with open("docking_result.pdb", 'w') as d:
         for i in range(len(cavities_xyz)):
-            x = cavities_xyz[i][0]
-            y = cavities_xyz[i][1]
-            z = cavities_xyz[i][2]
-            d.write(f"ATOM {i:d} {x} {y} {z} {docking_result[i][0]}\n")
+            d.write(format_water_oxygen_xyz(i, cavities_xyz,
+                                            docking_result[i]))
 
 
 if __name__ == "__main__":
