@@ -8,7 +8,7 @@ def format_water_oxygen_xyz(i, xyz, confidence):
     x = xyz[0]
     y = xyz[1]
     z = xyz[2]
-    entry = f"ATOM  {i+1:>4d}  OW   HOH D 1    {x:>8.3f}{y:>8.3f}{z:>8.3f}" +\
+    entry = f"ATOM  {i+1:>5d}  OW   HOH D 1    {x:>8.3f}{y:>8.3f}{z:>8.3f}" +\
             f"{0.00:>6.2f}" + f"{confidence:>6.2f}" + f"{'':<10}" + "O\n"
     return entry
 
@@ -27,5 +27,6 @@ if __name__ == "__main__":
     docking_result = model.predict(cavities[:, :-3])
     plt.plot(docking_result[:, 0])
     plt.show()
-    print(docking_result)
+    hits = np.sum(docking_result[:, 0] > 0.5)
+    print(f"{hits} water molecules have probability higher than 0.5")
     dock_water(cavities_xyz, docking_result)
