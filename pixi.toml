@@ -9,3 +9,5 @@ version = "0.1.0"
 
 [dependencies]
 matplotlib = ">=3.9.2,<4"
+numpy = ">=2.1.3,<3"
+cuda = ">=12.6.3,<13"
