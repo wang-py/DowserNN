@@ -13,7 +13,9 @@ if __name__ == "__main__":
     X_scaled = StandardScaler().fit_transform(input_data_X)
     pca_features = pca.fit_transform(X_scaled)
 
-    plt.scatter(pca_features[0, :], pca_features[1, :])
+    fig, ax = plt.subplots(2, 1)
+    ax[0].scatter(pca_features[0, :], pca_features[1, :])
+    ax[1].hist(pca_features[:, 0])
     plt.show()
 
     pass
