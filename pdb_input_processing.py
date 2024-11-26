@@ -2,6 +2,7 @@ import sys
 import os
 import timeit
 import numpy as np
+import pickle
 
 residue_types = {'ALA': 1, 'ARG': 2, 'ASP': 3, 'ASN': 4, 'CYS': 5, 'GLU': 6,
                  'GLY': 7, 'HIS': 8, 'ILE': 9, 'LEU': 10, 'MET': 11, 'LYS': 12,
@@ -412,6 +413,23 @@ def combine_training_data(X_yes, X_no, y_yes, y_no):
     return training_X, training_y
 
 
+def save_protein_data():
+    """
+    ----------------------------------------------------------------------------
+    function that saves dictionaries of residue types and atom types
+    ----------------------------------------------------------------------------
+    """
+    atom_types_file = 'protein_data/atom_types.pkl'
+    residue_types_file = 'protein_data/residue_types.pkl'
+
+    with open(atom_types_file, 'wb') as a:
+        pickle.dump(atom_types, a)
+    with open(residue_types_file, 'wb') as r:
+        pickle.dump(residue_types, r)
+
+    pass
+
+
 if __name__ == '__main__':
     try:
         input_pdb = sys.argv[1]
@@ -449,5 +467,6 @@ if __name__ == '__main__':
     np.save(f'test_data/{pdb_name}_CI_y_yes.npy', training_yes_y)
     np.save(f'test_data/{pdb_name}_CI_X.npy', training_X)
     np.save(f'test_data/{pdb_name}_CI_y.npy', training_y)
+    save_protein_data()
 
     pass
