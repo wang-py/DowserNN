@@ -6,7 +6,6 @@ from sklearn.preprocessing import StandardScaler
 
 if __name__ == "__main__":
     input_data_X = np.load(sys.argv[1])
-    input_data_y = np.load(sys.argv[2])
 
     # components in input data
     components = 70
