@@ -1,7 +1,7 @@
 [project]
 channels = ["conda-forge"]
 description = "Add a short description here"
-name = "DowserML"
+name = "DowserNN"
 platforms = ["linux-64"]
 version = "0.1.0"
 
@@ -9,7 +9,7 @@ version = "0.1.0"
 
 [dependencies]
 tensorflow = ">=2.6.2,<3"
+python = ">=3.9.15,<4"
+scikit-learn = ">=1.5.2,<2"
 numpy = ">=1.19.5,<2"
 matplotlib = ">=3.5.3,<4"
-keras = ">=3.6.0,<4"
-six = ">=1.16.0,<2"
