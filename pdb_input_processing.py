@@ -178,6 +178,37 @@ def generate_training_yes_X(waters, atoms, n):
     return training_X
 
 
+def generate_water_analysis_data(waters_original, atoms_original, n):
+    """
+    Generate X training data for yes cases for neural network
+    ----------------------------------------------------------------------------
+    waters_original: ndarray W x 7
+    Array of water information without feature encoding
+
+    atoms_original: ndarray N x 7
+    Array of other atoms' information without feature encoding
+
+    n: int
+    Number of closest atoms
+    ----------------------------------------------------------------------------
+    Returns:
+    training_X: W x n x 5
+    training X data
+    """
+    W = waters_original.shape[0]
+    analysis_data = np.zeros([W, 5 * n])
+    for i in range(W):
+        n_nearest_atoms = find_n_nearest_atoms(waters_original[i],
+                                               atoms_original, n)
+        internal_coords = get_internal_coords(
+                n_nearest_atoms[:, -4:-1] - waters_original[i, -3:])
+        one_analysis_data = np.append(n_nearest_atoms[:, 0:2],
+                                      internal_coords, axis=1)
+        analysis_data[i] = one_analysis_data.flatten()
+
+    return analysis_data
+
+
 def generate_training_yes_y(W):
     """
     generate y training data for yes cases
@@ -392,25 +423,24 @@ def format_atom_info_for_analysis(atom_info):
     python list that contains atom information from input pdb
     ----------------------------------------------------------------------------
     Returns:
-    water_data, protein_data: ndarray: N x 7
+    water_data, protein_data: ndarray: N x 5
     """
     water_data_original = []
     protein_data_original = []
     for line in atom_info:
-        one_data = np.array([])
         one_data_original = np.array([])
         xyz = [float(x) for x in line[30:53].split()]
         # read in the atom name
         atom_type = str(line[13:16]).strip()
         res_type = str(line[17:20]).strip()
         # original data for analysis purpose
-        one_data_original = np.append(one_data_original, atom_type)
-        one_data_original = np.append(one_data_original, res_type)
-        one_data_original = np.append(one_data, xyz)
+        one_data_original = np.append(one_data_original, atom_types[atom_type])
+        one_data_original = np.append(one_data_original, residue_types[res_type])
+        one_data_original = np.append(one_data_original, xyz)
         if res_type == 'HOH' or atom_type == 'OW':
-            water_data_original.append(one_data)
+            water_data_original.append(one_data_original)
         else:
-            protein_data_original.append(one_data)
+            protein_data_original.append(one_data_original)
 
     return np.array(water_data_original), np.array(protein_data_original)
 
@@ -490,6 +520,8 @@ if __name__ == '__main__':
     cavities_data = read_cavities(input_cavities)
     # print(atom_types)
     total_data = np.append(water_data, protein_data, axis=0)
+    total_data_original = np.append(water_data_original, protein_data_original,
+                                    axis=0)
     print("Generating training data...")
     starting_time = timeit.default_timer()
     training_yes_X = generate_training_yes_X(water_data, total_data, n=10)
@@ -507,6 +539,9 @@ if __name__ == '__main__':
                                                    training_no_y)
     # training_X = np.append(training_yes_X, training_no_X, axis=0)
     # training_y = np.append(training_yes_y, training_no_y, axis=0)
+    print("Generating analysis data...")
+    analysis_data = generate_water_analysis_data(water_data_original,
+                                                 total_data_original, n=10)
     ending_time = timeit.default_timer()
     total_time = ending_time - starting_time
     print(f"Data processing took {total_time:.2f} seconds")
@@ -515,6 +550,7 @@ if __name__ == '__main__':
     np.save(f'test_data/{pdb_name}_CI_y_yes.npy', training_yes_y)
     np.save(f'test_data/{pdb_name}_CI_X.npy', training_X)
     np.save(f'test_data/{pdb_name}_CI_y.npy', training_y)
+    np.save(f'test_data/{pdb_name}_CI_analysis.npy', analysis_data)
     save_protein_data()
 
     pass
