@@ -327,12 +327,27 @@ def read_pdb(input_pdb):
     path to pdb file
     ----------------------------------------------------------------------------
     Returns:
-    water_data, protein_data: ndarray: N x 7
+    atom_info: list
+    python list that contains atom information from input pdb
     """
     # read in the pdb file
     pdb_file = open(input_pdb)
     atom_info = [line for line in pdb_file.readlines()
                  if line.startswith('ATOM  ') or line.startswith('HETATM')]
+
+    return atom_info
+
+
+def format_atom_info_for_training(atom_info):
+    """
+    reads a pdb file and returns numpy array of water data and protein data
+    ----------------------------------------------------------------------------
+    atom_info: list
+    python list that contains atom information from input pdb
+    ----------------------------------------------------------------------------
+    Returns:
+    water_data, protein_data: ndarray: N x 7
+    """
     water_data = []
     protein_data = []
     num_of_atom_types = len(atom_types.keys())
@@ -367,6 +382,37 @@ def read_pdb(input_pdb):
             protein_data.append(one_data)
 
     return np.array(water_data), np.array(protein_data)
+
+
+def format_atom_info_for_analysis(atom_info):
+    """
+    reads a pdb file and returns numpy array of water data and protein data
+    ----------------------------------------------------------------------------
+    atom_info: list
+    python list that contains atom information from input pdb
+    ----------------------------------------------------------------------------
+    Returns:
+    water_data, protein_data: ndarray: N x 7
+    """
+    water_data_original = []
+    protein_data_original = []
+    for line in atom_info:
+        one_data = np.array([])
+        one_data_original = np.array([])
+        xyz = [float(x) for x in line[30:53].split()]
+        # read in the atom name
+        atom_type = str(line[13:16]).strip()
+        res_type = str(line[17:20]).strip()
+        # original data for analysis purpose
+        one_data_original = np.append(one_data_original, atom_type)
+        one_data_original = np.append(one_data_original, res_type)
+        one_data_original = np.append(one_data, xyz)
+        if res_type == 'HOH' or atom_type == 'OW':
+            water_data_original.append(one_data)
+        else:
+            protein_data_original.append(one_data)
+
+    return np.array(water_data_original), np.array(protein_data_original)
 
 
 def read_cavities(cavities_pdb):
@@ -438,7 +484,9 @@ if __name__ == '__main__':
         print("Usage: python pdb_input_processing.py input_pdb input_cavities")
         exit()
     pdb_name = os.path.basename(input_pdb).split('.')[0]
-    water_data, protein_data = read_pdb(input_pdb)
+    atom_info = read_pdb(input_pdb)
+    water_data, protein_data = format_atom_info_for_training(atom_info)
+    water_data_original, protein_data_original = format_atom_info_for_analysis(atom_info)
     cavities_data = read_cavities(input_cavities)
     # print(atom_types)
     total_data = np.append(water_data, protein_data, axis=0)
