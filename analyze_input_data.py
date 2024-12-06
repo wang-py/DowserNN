@@ -13,16 +13,16 @@ def read_protein_data(protein_data_dir='protein_data/'):
     return atom_types, res_types
 
 
-def decode_analysis(analysis_data):
+def decode_analysis(analysis_data, atom_types, res_types):
     """
     function that decodes the training data back to atom types and residue types
     ----------------------------------------------------------------------------
-    input_data_X_yes: N x 70 ndarray
+    input_data_X_yes: N x 50 ndarray
 
     input data that contains information about water molecules and their environment
     ----------------------------------------------------------------------------
     Returns:
-    input_data_X_decoded: N x 50 ndarray
+    input_data_X_decoded: N x 20 ndarray
     array that contains atom and residue names along with internal coordinates
     """
     input_data_X_decoded = np.zeros(analysis_data.shape[0], 20)
