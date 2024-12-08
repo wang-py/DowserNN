@@ -7,8 +7,10 @@ import pickle
 
 
 def read_protein_data(protein_data_dir='protein_data/'):
-    atom_types = pickle.load(protein_data_dir + 'atom_types.pkl')
-    res_types = pickle.load(protein_data_dir + 'residue_types.pkl')
+    with open(protein_data_dir + 'atom_types.pkl', 'rb') as a:
+        atom_types = pickle.load(a)
+    with open(protein_data_dir + 'residue_types.pkl', 'rb') as r:
+        res_types = pickle.load(r)
 
     return atom_types, res_types
 
@@ -17,23 +19,25 @@ def decode_analysis(analysis_data, atom_types, res_types):
     """
     function that decodes the training data back to atom types and residue types
     ----------------------------------------------------------------------------
-    input_data_X_yes: N x 50 ndarray
+    analysis_data: N x 50 ndarray
 
     input data that contains information about water molecules and their environment
     ----------------------------------------------------------------------------
     Returns:
-    input_data_X_decoded: N x 20 ndarray
+    analysis_data_decoded: N x 20 ndarray
     array that contains atom and residue names along with internal coordinates
     """
-    input_data_X_decoded = np.zeros(analysis_data.shape[0], 20)
+    analysis_data_decoded = np.zeros(analysis_data.shape[0], 20)
+    list(atom_types.keys())[list(atom_types.values()).index(16)]
 
-    return input_data_X_decoded
+    return analysis_data_decoded
 
 
 if __name__ == "__main__":
-    input_data_X = np.load(sys.argv[1])
+    analysis_data_arr = np.load(sys.argv[1])
     # load saved protein data
     atom_types, res_types = read_protein_data()
+    analysis_data = decode_analysis(analysis_data_arr, atom_types, res_types)
 
     # components in input data
     # components = 70
