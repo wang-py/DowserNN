@@ -435,7 +435,8 @@ def format_atom_info_for_analysis(atom_info):
         res_type = str(line[17:20]).strip()
         # original data for analysis purpose
         one_data_original = np.append(one_data_original, atom_types[atom_type])
-        one_data_original = np.append(one_data_original, residue_types[res_type])
+        one_data_original = np.append(one_data_original,
+                                      residue_types[res_type])
         one_data_original = np.append(one_data_original, xyz)
         if res_type == 'HOH' or atom_type == 'OW':
             water_data_original.append(one_data_original)
