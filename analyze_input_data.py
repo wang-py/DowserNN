@@ -12,10 +12,13 @@ def read_protein_data(protein_data_dir='protein_data/'):
     with open(protein_data_dir + 'residue_types.pkl', 'rb') as r:
         res_types = pickle.load(r)
 
-    return atom_types, res_types
+    atom_types_decoded = dict((v, k) for k, v in atom_types.items())
+    res_types_decoded = dict((v, k) for k, v in res_types.items())
+
+    return atom_types_decoded, res_types_decoded
 
 
-atom_types, res_types = read_protein_data()
+atom_types_decoded, res_types_decoded = read_protein_data()
 
 
 def get_atom_res_data(analysis_data):
@@ -54,23 +57,23 @@ def decode_atom_res_data(atom_data, res_data):
     arrays that contain atom and residue codes
     """
     data_pts = atom_data.shape[0]
-    atom_data_str = np.zeros(data_pts, 10)
-    res_data_str = np.zeros(data_pts, 10)
+    atom_data_str = []
+    res_data_str = []
 
     for i in range(data_pts):
-        atom_data_str[i] = list(atom_types.keys())[list(atom_types.values()).index(atom_data[i])]
-        res_data_str[i] = list(atom_types.keys())[list(atom_types.values()).index(atom_data[i])]
+        atom_data_str.append([atom_types_decoded[a_i] for a_i in atom_data[i]])
+        res_data_str.append([res_types_decoded[r_i] for r_i in res_data[i]])
 
     # list(atom_types.keys())[list(atom_types.values()).index(16)]
 
-    return atom_data_str, res_data_str
+    return np.array(atom_data_str), np.array(res_data_str)
 
 
-def plot_atom_res_dist(atom_data, res_data):
+def plot_atom_res_dist(atom_data_str, res_data_str):
     fig, ax = plt.subplots(1, 2)
     # ax[0].scatter(pca_features[0, :], pca_features[1, :])
-    ax[0].hist(atom_data[:, 0])
-    ax[1].hist(res_data[:, 0])
+    ax[0].hist(atom_data_str[:, 0])
+    ax[1].hist(res_data_str[:, 0])
     plt.show()
     pass
 
@@ -80,7 +83,7 @@ if __name__ == "__main__":
     # load saved protein data
     atom_data, res_data = get_atom_res_data(analysis_data_arr)
     atom_data_str, res_data_str = decode_atom_res_data(atom_data, res_data)
-    plot_atom_res_dist(atom_data, res_data)
+    plot_atom_res_dist(atom_data_str, res_data_str)
 
     # components in input data
     # components = 70
