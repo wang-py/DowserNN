@@ -70,10 +70,13 @@ def decode_atom_res_data(atom_data, res_data):
 
 
 def plot_atom_res_dist(atom_data_str, res_data_str):
-    fig, ax = plt.subplots(1, 2)
-    # ax[0].scatter(pca_features[0, :], pca_features[1, :])
-    ax[0].hist(atom_data_str[:, 0])
-    ax[1].hist(res_data_str[:, 0])
+    fig, ax = plt.subplots(1, 2, figsize=(20, 12))
+    num_of_bins_atom = len(atom_types_decoded.values())
+    num_of_bins_res = len(res_types_decoded.values())
+    ax[0].hist(atom_data_str[:, 0], bins=num_of_bins_atom, edgecolor='black')
+    ax[0].set_xticks(ax[0].get_xticks())
+    ax[0].set_xticklabels(ax[0].get_xticklabels(), rotation=45, fontsize=6)
+    ax[1].hist(res_data_str[:, 0], bins=num_of_bins_res, edgecolor='black')
     plt.show()
     pass
 
