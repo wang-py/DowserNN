@@ -2,7 +2,7 @@ import numpy as np
 import sys
 import matplotlib.pyplot as plt
 import pickle
-# from sklearn.decomposition import PCA
+from collections import Counter
 # from sklearn.preprocessing import StandardScaler
 
 
@@ -70,13 +70,23 @@ def decode_atom_res_data(atom_data, res_data):
 
 
 def plot_atom_res_dist(atom_data_str, res_data_str):
+    atom_count = Counter(atom_data_str[:, 0])
+    atom_freq = atom_count.values()
+    atom_names = atom_count.keys()
+    atom_x = np.arange(len(atom_count))
+    res_count = Counter(res_data_str[:, 0])
+    res_freq = res_count.values()
+    res_names = res_count.keys()
+    res_x = np.arange(len(res_count))
     fig, ax = plt.subplots(1, 2, figsize=(20, 12))
-    num_of_bins_atom = len(atom_types_decoded.values())
-    num_of_bins_res = len(res_types_decoded.values())
-    ax[0].hist(atom_data_str[:, 0], bins=num_of_bins_atom, edgecolor='black')
-    ax[0].set_xticks(ax[0].get_xticks())
+    ax[0].bar(atom_x, atom_freq, edgecolor='black', align='edge', width=1)
+    # ax[0].set_xticks(ax[0].get_xticks())
+    ax[0].xaxis.set_major_locator(plt.FixedLocator(atom_x))
+    ax[0].xaxis.set_major_formatter(plt.FixedFormatter(list(atom_names)))
     ax[0].set_xticklabels(ax[0].get_xticklabels(), rotation=45, fontsize=6)
-    ax[1].hist(res_data_str[:, 0], bins=num_of_bins_res, edgecolor='black')
+    ax[1].bar(res_x, res_freq, edgecolor='black')
+    ax[1].xaxis.set_major_locator(plt.FixedLocator(res_x))
+    ax[1].xaxis.set_major_formatter(plt.FixedFormatter(list(res_names)))
     plt.show()
     pass
 
