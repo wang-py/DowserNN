@@ -69,16 +69,19 @@ def decode_atom_res_data(atom_data, res_data):
     return np.array(atom_data_str), np.array(res_data_str)
 
 
-def plot_atom_res_dist(atom_data_str, res_data_str):
-    atom_count = Counter(atom_data_str[:, 0])
+def plot_atom_res_dist(atom_data_str, res_data_str, n: int = 0):
+    ranks = ['1st', '2nd', '3rd', '4th', '5th',
+             '6th', '7th', '8th', '9th', '10th']
+    atom_count = Counter(atom_data_str[:, n])
     atom_freq = atom_count.values()
     atom_names = atom_count.keys()
     atom_x = np.arange(len(atom_count))
-    res_count = Counter(res_data_str[:, 0])
+    res_count = Counter(res_data_str[:, n])
     res_freq = res_count.values()
     res_names = res_count.keys()
     res_x = np.arange(len(res_count))
     fig, ax = plt.subplots(1, 2, figsize=(20, 12))
+    fig.suptitle(f"Distribution of atoms/residues of {ranks[n]} closest atom")
     ax[0].bar(atom_x, atom_freq, edgecolor='black', align='edge', width=1)
     # ax[0].set_xticks(ax[0].get_xticks())
     ax[0].xaxis.set_major_locator(plt.FixedLocator(atom_x))
@@ -96,7 +99,7 @@ if __name__ == "__main__":
     # load saved protein data
     atom_data, res_data = get_atom_res_data(analysis_data_arr)
     atom_data_str, res_data_str = decode_atom_res_data(atom_data, res_data)
-    plot_atom_res_dist(atom_data_str, res_data_str)
+    plot_atom_res_dist(atom_data_str, res_data_str, n=9)
 
     # components in input data
     # components = 70
