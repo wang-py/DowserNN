@@ -73,23 +73,23 @@ def plot_atom_res_dist(atom_data_str, res_data_str, n: int = 0):
     ranks = ['1st', '2nd', '3rd', '4th', '5th',
              '6th', '7th', '8th', '9th', '10th']
     atom_count = Counter(atom_data_str[:, n])
-    atom_freq = atom_count.values()
-    atom_names = atom_count.keys()
+    atom_freq = sorted(atom_count.values(), reverse=True)
+    atom_names = sorted(atom_count, key=atom_count.get, reverse=True)
     atom_x = np.arange(len(atom_count))
     res_count = Counter(res_data_str[:, n])
-    res_freq = res_count.values()
-    res_names = res_count.keys()
+    res_freq = sorted(res_count.values(), reverse=True)
+    res_names = sorted(res_count, key=res_count.get, reverse=True)
     res_x = np.arange(len(res_count))
     fig, ax = plt.subplots(1, 2, figsize=(20, 12))
     fig.suptitle(f"Distribution of atoms/residues of {ranks[n]} closest atom")
-    ax[0].bar(atom_x, atom_freq, edgecolor='black', align='edge', width=1)
+    ax[0].bar(atom_x, atom_freq, edgecolor='black', align='center', width=1)
     # ax[0].set_xticks(ax[0].get_xticks())
     ax[0].xaxis.set_major_locator(plt.FixedLocator(atom_x))
-    ax[0].xaxis.set_major_formatter(plt.FixedFormatter(list(atom_names)))
+    ax[0].xaxis.set_major_formatter(plt.FixedFormatter(atom_names))
     ax[0].set_xticklabels(ax[0].get_xticklabels(), rotation=45, fontsize=6)
     ax[1].bar(res_x, res_freq, edgecolor='black')
     ax[1].xaxis.set_major_locator(plt.FixedLocator(res_x))
-    ax[1].xaxis.set_major_formatter(plt.FixedFormatter(list(res_names)))
+    ax[1].xaxis.set_major_formatter(plt.FixedFormatter(res_names))
     plt.show()
     pass
 
@@ -99,7 +99,7 @@ if __name__ == "__main__":
     # load saved protein data
     atom_data, res_data = get_atom_res_data(analysis_data_arr)
     atom_data_str, res_data_str = decode_atom_res_data(atom_data, res_data)
-    plot_atom_res_dist(atom_data_str, res_data_str, n=9)
+    plot_atom_res_dist(atom_data_str, res_data_str, n=0)
 
     # components in input data
     # components = 70
