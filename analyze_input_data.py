@@ -96,10 +96,11 @@ def plot_atom_res_dist(atom_data_str, res_data_str, n: int = 0):
 
 if __name__ == "__main__":
     analysis_data_arr = np.load(sys.argv[1])
+    n = int(sys.argv[2])
     # load saved protein data
     atom_data, res_data = get_atom_res_data(analysis_data_arr)
     atom_data_str, res_data_str = decode_atom_res_data(atom_data, res_data)
-    plot_atom_res_dist(atom_data_str, res_data_str, n=0)
+    plot_atom_res_dist(atom_data_str, res_data_str, n)
 
     # components in input data
     # components = 70
