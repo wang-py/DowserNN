@@ -70,7 +70,7 @@ def decode_atom_res_data(atom_data, res_data):
 
 
 def plot_atom_res_dist(atom_data_str, res_data_str, n: int = 0):
-    ranks = ['1st', '2nd', '3rd', '4th', '5th',
+    ranks = ['the', '2nd', '3rd', '4th', '5th',
              '6th', '7th', '8th', '9th', '10th']
     atom_count = Counter(atom_data_str[:, n])
     atom_freq = sorted(atom_count.values(), reverse=True)
