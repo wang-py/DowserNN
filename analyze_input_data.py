@@ -25,7 +25,7 @@ def get_atom_res_data(analysis_data):
     """
     function that extracts atom codes and residue codes from analysis data
     ----------------------------------------------------------------------------
-    analysis_data: N x 50 ndarray
+    analysis_data: N x 80 ndarray
 
     input data that contains information about water molecules and their
     environment
@@ -35,8 +35,8 @@ def get_atom_res_data(analysis_data):
     res_data: N x 10 ndarray
     arrays that contain atom and residue codes
     """
-    atom_data = analysis_data[:, 0::5]
-    res_data = analysis_data[:, 1::5]
+    atom_data = analysis_data[:, 0::8]
+    res_data = analysis_data[:, 1::8]
 
     return atom_data, res_data
 
@@ -46,7 +46,7 @@ def decode_atom_res_data(atom_data, res_data):
     function that decodes the training data back to atom types and residue
     types
     ----------------------------------------------------------------------------
-    analysis_data: N x 50 ndarray
+    analysis_data: N x 80 ndarray
 
     input data that contains information about water molecules and their
     environment
