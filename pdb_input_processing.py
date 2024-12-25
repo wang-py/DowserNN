@@ -196,7 +196,7 @@ def generate_water_analysis_data(waters_original, atoms_original, n):
     training X data
     """
     W = waters_original.shape[0]
-    analysis_data = np.zeros([W, 5 * n])
+    analysis_data = np.zeros([W, 8 * n])
     for i in range(W):
         n_nearest_atoms = find_n_nearest_atoms(waters_original[i],
                                                atoms_original, n)
@@ -204,6 +204,9 @@ def generate_water_analysis_data(waters_original, atoms_original, n):
                 n_nearest_atoms[:, -4:-1] - waters_original[i, -3:])
         one_analysis_data = np.append(n_nearest_atoms[:, 0:2],
                                       internal_coords, axis=1)
+        # add original xyz coords
+        one_analysis_data = np.append(one_analysis_data,
+                                      n_nearest_atoms[:, -3:], axis=1)
         analysis_data[i] = one_analysis_data.flatten()
 
     return analysis_data
