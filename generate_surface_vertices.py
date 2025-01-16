@@ -19,6 +19,9 @@ def convert_pdb_to_xyzr(input_pdb: str):
     input pdb filename
     
     ----------------------------------------------------------------------------
+    Returns:
+    output_name: str
+    output filename
     """
     pdb_name = os.path.basename(input_pdb).split('.')[0]
     output_name = pdb_name + ".xyzr"
@@ -28,7 +31,7 @@ def convert_pdb_to_xyzr(input_pdb: str):
         popen = subprocess.Popen(popen_args, stdout = output)
         popen.wait()
 
-    pass
+    return output_name
 
 
 def run_msms(input_pdb: str, output: str, probe_radius=1.5):
@@ -46,8 +49,9 @@ def run_msms(input_pdb: str, output: str, probe_radius=1.5):
 
     ----------------------------------------------------------------------------
     """
-    popen_args = ("./msms.x86_64Linux2.2.6.1", "-if", input_pdb,
-                  "-of", output, "--probe_radius", probe_radius)
+    vertice_filename = convert_pdb_to_xyzr(args.pdb_file)
+    popen_args = ("./msms.x86_64Linux2.2.6.1", "-if", vertice_filename,
+                  "-of", output, "-probe_radius", probe_radius)
     popen = subprocess.Popen(popen_args, stdout = subprocess.PIPE)
     popen.wait()
     pass
@@ -57,8 +61,9 @@ if __name__== '__main__':
     args = parser.parse_args()
     print(args.pdb_file)
     print(args.output)
+    if not args.probe_radius:
+        args.probe_radius = 1.5
     print(args.probe_radius)
-
-    convert_pdb_to_xyzr(args.pdb_file)
+    run_msms(args.pdb_file, args.output, args.probe_radius)
 
     pass
