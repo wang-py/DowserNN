@@ -1,9 +1,11 @@
 import numpy as np
 import argparse
-from pdb_input_processing import read_pdb, find_distances
-parser = argparse.ArgumentParser(prog='categorize_water.py',
-                                 description='script that separates water molecules into surface and internal water and output them as pdbs',
-                                 )
+from pdb_input_processing import read_pdb
+parser = argparse.ArgumentParser(
+        prog='categorize_water.py',
+        description='script that separates water molecules into \
+                surface and internal water and output them as pdbs',
+        )
 parser.add_argument('-f', '--filename')
 parser.add_argument('-s', '--surface_file')
 parser.add_argument('-o', '--output_filename')
@@ -29,6 +31,10 @@ def get_water_data(atom_info):
             water_data.append(line)
 
     return water_data
+
+
+def find_distances():
+    pass
 
 
 def get_surface_and_internal_water(water_data, surface_points, radius=3):
@@ -64,9 +70,11 @@ if __name__ == "__main__":
     atom_info = read_pdb(args.filename)
     surface_points = read_surface_points(args.surface_file)
     water_data = get_water_data(atom_info)
-    surface_water_data, internal_water_data = get_surface_and_internal_water(water_data,
-                                                        surface_points,
-                                                        args.include_radius)
+    surface_water_data, internal_water_data = get_surface_and_internal_water(
+            water_data,
+            surface_points,
+            args.include_radius
+            )
     write_water_to_pdb(surface_water_data,
                        args.output_filename + "_surface.pdb")
     write_water_to_pdb(internal_water_data,
