@@ -1,6 +1,6 @@
 import numpy as np
 import argparse
-from pdb_input_processing import read_pdb
+from pdb_input_processing import read_pdb, find_distances
 parser = argparse.ArgumentParser(
         prog='categorize_water.py',
         description='script that separates water molecules into \
@@ -31,10 +31,6 @@ def get_water_data(atom_info):
             water_data.append(line)
 
     return water_data
-
-
-def find_distances():
-    pass
 
 
 def get_surface_and_internal_water(water_data, surface_points, radius=3):
