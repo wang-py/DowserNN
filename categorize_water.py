@@ -1,6 +1,6 @@
 import numpy as np
 import argparse
-from pdb_input_processing import read_pdb, find_distances
+from pdb_input_processing import read_pdb
 parser = argparse.ArgumentParser(
         prog='categorize_water.py',
         description='script that separates water molecules into \
@@ -16,7 +16,7 @@ def read_surface_points(surface_file):
     # read in the vertex file
     surface = open(surface_file)
     # skip comments
-    surface_points = [line.split()[0:3] for line in surface.readlines()[3:]]
+    surface_points = [line.split()[0:6] for line in surface.readlines()[3:]]
     surface_points = np.array(surface_points).astype(float)
 
     return surface_points
@@ -33,14 +33,31 @@ def get_water_data(atom_info):
     return water_data
 
 
+def is_on_surface(water_coords, surface_points, radius=3):
+    surface_coor = surface_points[:, 0:3]
+    surface_normal = surface_points[:, 3:]
+    delta = water_coords - surface_coor
+    delta_sq = np.square(delta)
+    dist = np.sqrt(np.sum(delta_sq, axis=1))
+    dist_check = dist <= radius
+    if not dist_check.any():
+        return False
+    water_in_range = delta[dist_check]
+    vec_in_range = surface_normal[dist_check]
+    dist_along_normal = np.dot(water_in_range, vec_in_range.T)
+    normal_check = dist_along_normal > 0
+    if normal_check.any():
+        return True
+
+    return False
+
+
 def get_surface_and_internal_water(water_data, surface_points, radius=3):
     surface_water = []
     internal_water = []
     for one_water in water_data:
         one_xyz = np.array(one_water[30:54].split()).astype(float)
-        dist = find_distances(one_xyz, surface_points)
-        check = dist < radius
-        if check.any():
+        if is_on_surface(one_xyz, surface_points, radius):
             surface_water.append(one_water)
         else:
             internal_water.append(one_water)
