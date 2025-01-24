@@ -123,7 +123,7 @@ def write_water_to_pdb(water_data, output_filename):
     """
     write water data to pdb file
     ----------------------------------------------------------------------------
-    water_data: 
+    water_data:
     list that contains water pdb data
 
     output_filename: str
