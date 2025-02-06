@@ -10,6 +10,17 @@ from training_visualization import weights_visualization_callback
 from training_visualization import weights_history_visualizer
 import tensorflow as tf
 import matplotlib.pyplot as plt
+import argparse
+
+parser = argparse.ArgumentParser(
+        prog='train_model.py',
+        description='script that trains neural network model and\
+                saves it to file',
+        )
+parser.add_argument('-t', '--train_pdb')
+parser.add_argument('-v', '--validate_pdb')
+parser.add_argument('-o', '--output_filename')
+
 
 # make sure results are reproducible
 seed_val = 1029
@@ -199,31 +210,34 @@ def save_model(model, output_filename: str):
 
 if __name__ == "__main__":
     # Generate training and validation data
-    training_pdb = sys.argv[1]
-    testing_pdb = sys.argv[2]
+    args = parser.parse_args()
+    training_pdb = args.train_pdb
+    testing_pdb = args.validate_pdb
     X_file = training_pdb + "_CI_X.npy"
     y_file = training_pdb + "_CI_y.npy"
-    X_file_test = testing_pdb + "_CI_X.npy"
-    y_file_test = testing_pdb + "_CI_y.npy"
-    X_yes_file = X_file.split('.')[0] + '_yes.npy'
-    y_yes_file = y_file.split('.')[0] + '_yes.npy'
     X = np.load(X_file)
     y = np.load(y_file)
-    X_test = np.load(X_file_test)
-    y_test = np.load(y_file_test)
-    X_test = tf.convert_to_tensor(X_test)
-    y_test = tf.convert_to_tensor(y_test)
-    X_yes = np.load(X_yes_file)
-    y_yes = np.load(y_yes_file)
     # spliting data into training set and testing set
     training_N = int(X.shape[0])
     X_data = tf.convert_to_tensor(X[:training_N, :])
     y_data = tf.convert_to_tensor(y[:training_N, :])
-    X_validate = tf.convert_to_tensor(X_yes)
-    y_validate = tf.convert_to_tensor(y_yes)
     input_dim = X_data.shape[1]
     hidden_dim = 64
     N = X_data.shape[0]
+    # if not testing with another structure
+    if testing_pdb is not None:
+        X_file_test = testing_pdb + "_CI_X.npy"
+        y_file_test = testing_pdb + "_CI_y.npy"
+        X_test = tf.convert_to_tensor(np.load(X_file_test))
+        y_test = tf.convert_to_tensor(np.load(y_file_test))
+    else:
+        X_test = X_data
+        y_test = y_data
+        testing_pdb = training_pdb
+    X_yes_file = X_file.split('.')[0] + '_yes.npy'
+    y_yes_file = y_file.split('.')[0] + '_yes.npy'
+    X_validate = tf.convert_to_tensor(np.load(X_yes_file))
+    y_validate = tf.convert_to_tensor(np.load(y_yes_file))
 
     # X_test = tf.convert_to_tensor(X[training_N:, :])
     # y_test = tf.convert_to_tensor(y[training_N:, :])
@@ -243,19 +257,6 @@ if __name__ == "__main__":
     history = model.fit(X_data, y_data, epochs=epochs, batch_size=32,
                         validation_data=(X_test, y_test), callbacks=callback)
     np.set_printoptions(precision=4, suppress=True)
-    # print("expected output:\n", y_data)
-    # print("predicted output:\n", y_predicted)
-
-    # test with new data
-    # training_loss, training_accuracy = model.evaluate(X_data, y_data)
-    # print(f"training loss: {training_loss}")
-    # test_loss = None
-    # if training_N != X.shape[0]:
-    #     test_loss, accuracy = model.evaluate(X_test, y_test)
-    #     print(f"test loss: {test_loss}")  # , test accuracy: {accuracy:.2%}")
-    # print("expected output:\n", y_test)
-    # print("predicted output:\n", y_validate)
-    # error_percent = np.sum(y_validate - y_test) / np.sum(y_test)
 
     # plot training loss
     plot_loss_history(history, training_pdb, testing_pdb)
