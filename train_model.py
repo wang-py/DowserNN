@@ -17,6 +17,13 @@ utils.set_random_seed(seed_val)
 
 
 def plot_model_accuracy(accuracy_values):
+    """
+    function that plots the accuracy of water prediction
+    ----------------------------------------------------------------------------
+    accuracy_values: ndarray
+    numpy array of accuracy values of water prediction
+    ----------------------------------------------------------------------------
+    """
     accuracy_threshold = 0.5
     num_above_threshold = np.sum(accuracy_values > accuracy_threshold)
     num_of_water = accuracy_values.shape[0]
@@ -34,6 +41,23 @@ def plot_model_accuracy(accuracy_values):
 
 
 def get_model_accuracy(model, X_validate, y_validate):
+    """
+    function that evaluates the accuracy of water prediction
+    ----------------------------------------------------------------------------
+    model: obj
+    pre-trained model used for evaluation
+
+    X_validate: ndarray
+    descriptors of water molecules
+
+    y_validate: ndarray
+    yes/no results for water molecules
+    ----------------------------------------------------------------------------
+
+    Returns:
+    accuracy_values: ndarray
+    accuracy values of predicted water molecules
+    """
     y_predicted = model.predict(X_validate)
     assert y_validate.shape[0] == y_predicted.shape[0]
     y_validate = np.array(y_validate)
@@ -46,6 +70,18 @@ def get_model_accuracy(model, X_validate, y_validate):
 
 
 def get_low_accuracy_waters(accuracy_values):
+    """
+    finds the index of water with a accuracy lower than 50%
+    ----------------------------------------------------------------------------
+    accuracy_values: ndarray
+    accuracy values of predicted water molecules
+    ----------------------------------------------------------------------------
+
+    Returns:
+    saves the index and accuracy values of water with accuracy lower than 50%
+    to a txt file named "low_accuracy_water.txt"
+
+    """
     accuracy_threshold = 0.5
     water_index = np.where(accuracy_values < accuracy_threshold)[0]
     print(f"{water_index.shape[0]} waters have accuracy lower than" +
@@ -58,6 +94,20 @@ def get_low_accuracy_waters(accuracy_values):
 
 
 def plot_loss_history(history, train_pdb, val_pdb):
+    """
+    plots the training and validation loss
+    ----------------------------------------------------------------------------
+    history: history obj of training that contains the loss results
+
+    train_pdb: pdb name of training structure
+
+    val_pdb: pdb name of validation structure
+    ----------------------------------------------------------------------------
+
+    Returns:
+    None
+
+    """
     fig, ax = plt.subplots(figsize=(8, 6))
     training_loss = history.history['loss']
     validation_loss = history.history['val_loss']
@@ -77,7 +127,31 @@ def plot_loss_history(history, train_pdb, val_pdb):
     plt.show()
 
 
-def build_NN(num_of_layers, N, input_dim, hidden_dim, learning_rate):
+def build_NN(num_of_layers: int, N: int, input_dim: int, hidden_dim: int, learning_rate: float):
+    """
+    function that builds the neural network
+    ----------------------------------------------------------------------------
+    num_of_layers: int
+    number of layers of the neural network
+
+    N: int
+    size of one descriptor
+
+    input_dim: int
+    number of descriptors
+
+    hidden_dim: int
+    dimension of the hidden layers
+
+    learning_rate: float
+    learning rate of back propagation
+    ----------------------------------------------------------------------------
+
+    Returns:
+    model: obj
+    Neural network object
+
+    """
     model = Sequential()
     model.add(
         Dense(
@@ -109,7 +183,17 @@ def build_NN(num_of_layers, N, input_dim, hidden_dim, learning_rate):
     return model
 
 
-def save_model(model, output_filename):
+def save_model(model, output_filename: str):
+    """
+    saves trained model to file
+    ----------------------------------------------------------------------------
+    model: obj
+    neural network object
+
+    output_filename: str
+    filename for the model
+    ----------------------------------------------------------------------------
+    """
     model.save(output_filename)
 
 
