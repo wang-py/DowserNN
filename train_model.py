@@ -1,4 +1,5 @@
 import numpy as np
+import random
 import sys
 import os
 from keras.models import Sequential
@@ -17,14 +18,45 @@ parser = argparse.ArgumentParser(
         description='script that trains neural network model and\
                 saves it to file',
         )
-parser.add_argument('-t', '--train_pdb')
-parser.add_argument('-v', '--validate_pdb')
-parser.add_argument('-o', '--output_filename')
+parser.add_argument('-t', '--train_pdb', type=str)
+parser.add_argument('-p', '--test_percentage', type=float)
+parser.add_argument('-v', '--validate_pdb', type=str)
+parser.add_argument('-o', '--output_filename', type=str)
 
 
 # make sure results are reproducible
 seed_val = 1029
 utils.set_random_seed(seed_val)
+
+
+def generate_test_set(X_data, y_data, percent: float):
+    """
+    generates testing set from all input data, the percentage of test data can 
+    be specified by "percent"
+    ----------------------------------------------------------------------------
+    X_data: ndarray
+    all input X
+
+    y_data: ndarray
+    all input y
+
+    percent: float
+    percentage of testing data in all data
+    ----------------------------------------------------------------------------
+    Returns:
+    test_X: ndarray
+    X data for testing
+
+    test_y
+    y data for testing
+    """
+    index_range = X_data.shape[0]
+    num_of_test_pts = int(index_range * percent)
+    test_index = random.sample(range(index_range), num_of_test_pts)
+    test_X = tf.gather(X_data, indices=test_index)
+    test_y = tf.gather(y_data, indices=test_index)
+
+    return test_X, test_y
 
 
 def plot_model_accuracy(accuracy_values):
@@ -213,6 +245,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     training_pdb = args.train_pdb
     testing_pdb = args.validate_pdb
+    testing_percentage = args.test_percentage
     X_file = training_pdb + "_CI_X.npy"
     y_file = training_pdb + "_CI_y.npy"
     X = np.load(X_file)
@@ -231,8 +264,8 @@ if __name__ == "__main__":
         X_test = tf.convert_to_tensor(np.load(X_file_test))
         y_test = tf.convert_to_tensor(np.load(y_file_test))
     else:
-        X_test = X_data
-        y_test = y_data
+        X_test, y_test = generate_test_set(X_data, y_data,
+                                           percent=testing_percentage)
         testing_pdb = training_pdb
     X_yes_file = X_file.split('.')[0] + '_yes.npy'
     y_yes_file = y_file.split('.')[0] + '_yes.npy'
@@ -252,7 +285,7 @@ if __name__ == "__main__":
         print("No exising model found, creating a new model")
         model = build_NN(num_of_layers, N, input_dim, hidden_dim,
                          learning_rate=0.001)
-    epochs = 50
+    epochs = 150
     # Train the model
     history = model.fit(X_data, y_data, epochs=epochs, batch_size=32,
                         validation_data=(X_test, y_test), callbacks=callback)
