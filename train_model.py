@@ -1,6 +1,5 @@
 import numpy as np
 import random
-import sys
 import os
 from keras.models import Sequential
 from keras.layers import Dense
@@ -29,10 +28,10 @@ seed_val = 1029
 utils.set_random_seed(seed_val)
 
 
-def generate_test_set(X_data, y_data, percent: float):
+def generate_train_test_set(X_data, y_data, percent: float):
     """
-    generates testing set from all input data, the percentage of test data can 
-    be specified by "percent"
+    generates training and testing sets from all input data, the percentage of
+    test data can be specified by "percent"
     ----------------------------------------------------------------------------
     X_data: ndarray
     all input X
@@ -51,12 +50,16 @@ def generate_test_set(X_data, y_data, percent: float):
     y data for testing
     """
     index_range = X_data.shape[0]
+    indices = range(index_range)
     num_of_test_pts = int(index_range * percent)
-    test_index = random.sample(range(index_range), num_of_test_pts)
+    test_index = random.sample(indices, num_of_test_pts)
+    train_index = list(set(indices) - set(test_index))
     test_X = tf.gather(X_data, indices=test_index)
     test_y = tf.gather(y_data, indices=test_index)
+    train_X = tf.gather(X_data, indices=train_index)
+    train_y = tf.gather(y_data, indices=train_index)
 
-    return test_X, test_y
+    return train_X, train_y, test_X, test_y
 
 
 def plot_model_accuracy(accuracy_values):
@@ -251,29 +254,29 @@ if __name__ == "__main__":
     X = np.load(X_file)
     y = np.load(y_file)
     # spliting data into training set and testing set
-    training_N = int(X.shape[0])
-    X_data = tf.convert_to_tensor(X[:training_N, :])
-    y_data = tf.convert_to_tensor(y[:training_N, :])
+    X_data = tf.convert_to_tensor(X)
+    y_data = tf.convert_to_tensor(y)
     input_dim = X_data.shape[1]
     hidden_dim = 64
     N = X_data.shape[0]
     # if not testing with another structure
     if testing_pdb is not None:
+        X_train = X_data
+        y_train = y_data
         X_file_test = testing_pdb + "_CI_X.npy"
         y_file_test = testing_pdb + "_CI_y.npy"
         X_test = tf.convert_to_tensor(np.load(X_file_test))
         y_test = tf.convert_to_tensor(np.load(y_file_test))
     else:
-        X_test, y_test = generate_test_set(X_data, y_data,
-                                           percent=testing_percentage)
+        X_train, y_train, X_test, y_test =\
+            generate_train_test_set(X_data, y_data,
+                                    percent=testing_percentage)
         testing_pdb = training_pdb
     X_yes_file = X_file.split('.')[0] + '_yes.npy'
     y_yes_file = y_file.split('.')[0] + '_yes.npy'
     X_validate = tf.convert_to_tensor(np.load(X_yes_file))
     y_validate = tf.convert_to_tensor(np.load(y_yes_file))
 
-    # X_test = tf.convert_to_tensor(X[training_N:, :])
-    # y_test = tf.convert_to_tensor(y[training_N:, :])
     # record weights during each training iteration
     # Create a neural network model
     num_of_layers = 3
@@ -287,7 +290,7 @@ if __name__ == "__main__":
                          learning_rate=0.001)
     epochs = 150
     # Train the model
-    history = model.fit(X_data, y_data, epochs=epochs, batch_size=32,
+    history = model.fit(X_train, y_train, epochs=epochs, batch_size=32,
                         validation_data=(X_test, y_test), callbacks=callback)
     np.set_printoptions(precision=4, suppress=True)
 
