@@ -3,6 +3,7 @@ import sys
 import os
 import timeit
 from pdb_input_processing import read_pdb, read_cavities
+from pdb_input_processing import format_atom_info_for_training
 from pdb_input_processing import feature_encoder_residue
 from pdb_input_processing import find_n_nearest_atoms, get_internal_coords
 
@@ -59,7 +60,9 @@ if __name__ == "__main__":
         print("Usage: python generate_docking_points.py input_pdb input_cavities")
         exit()
     pdb_name = os.path.basename(input_pdb).split('.')[0]
-    water_data, protein_data = read_pdb(input_pdb)
+    water_data, protein_data = format_atom_info_for_training(
+            read_pdb(input_pdb)
+            )
     cavities_data = read_cavities(input_cavities)
     print("Generating docking points...")
     starting_time = timeit.default_timer()
