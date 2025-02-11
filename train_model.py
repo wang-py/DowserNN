@@ -18,7 +18,7 @@ parser = argparse.ArgumentParser(
                 saves it to file',
         )
 parser.add_argument('-t', '--train_pdb', type=str)
-parser.add_argument('-p', '--test_percentage', type=float)
+parser.add_argument('-p', '--test_percentage', type=float, default=0.2)
 parser.add_argument('-v', '--validate_pdb', type=str)
 parser.add_argument('-o', '--output_filename', type=str)
 
