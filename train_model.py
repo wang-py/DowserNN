@@ -287,8 +287,8 @@ if __name__ == "__main__":
     except ValueError:
         print("No exising model found, creating a new model")
         model = build_NN(num_of_layers, N, input_dim, hidden_dim,
-                         learning_rate=0.001)
-    epochs = 150
+                         learning_rate=0.0005)
+    epochs = 50
     # Train the model
     history = model.fit(X_train, y_train, epochs=epochs, batch_size=32,
                         validation_data=(X_test, y_test), callbacks=callback)
@@ -309,4 +309,4 @@ if __name__ == "__main__":
     weights_visualizer.visualize(interval=10, frametime=200)
     # weights_visualizer.save('layer_visualization_8OM1.mp4')
     # save model
-    save_model(model, 'test_data/DowserNN.keras')
+    save_model(model, training_pdb + '.keras')
