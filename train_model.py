@@ -249,6 +249,7 @@ if __name__ == "__main__":
     training_pdb = args.train_pdb
     testing_pdb = args.validate_pdb
     testing_percentage = args.test_percentage
+    model_filename = args.output_filename
     X_file = training_pdb + "_CI_X.npy"
     y_file = training_pdb + "_CI_y.npy"
     X = np.load(X_file)
@@ -309,4 +310,6 @@ if __name__ == "__main__":
     weights_visualizer.visualize(interval=10, frametime=200)
     # weights_visualizer.save('layer_visualization_8OM1.mp4')
     # save model
-    save_model(model, training_pdb + '.keras')
+    if model_filename is None:
+        model_filename = training_pdb + '.keras'
+    save_model(model, model_filename)
