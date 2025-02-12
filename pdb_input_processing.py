@@ -245,7 +245,7 @@ def check_num_of_protein_atoms(atoms_partitions, atoms):
     return False
 
 
-def generate_training_no_X(atoms, cavities, n, interval):
+def generate_training_no_X(atoms, cavities, n, interval: int):
     """
     Generate X training data for no cases for neural network
     ----------------------------------------------------------------------------
@@ -278,7 +278,7 @@ def generate_training_no_X(atoms, cavities, n, interval):
     C = cavities.shape[0]
     HOH_encoding = feature_encoder_residue(residue_types['HOH'])
     training_X = []
-    for i in range(0, C, interval):
+    for i in range(0, C, int(interval)):
         n_nearest_atoms = find_n_nearest_atoms(cavities[i], atoms, n)
         HOH_check = n_nearest_atoms[:, 2:4] - HOH_encoding
         if not np.any(HOH_check == 0.0):
@@ -531,9 +531,10 @@ if __name__ == '__main__':
     training_yes_X = generate_training_yes_X(water_data, total_data, n=10)
     training_yes_y = generate_training_yes_y(water_data.shape[0])
     num_of_cav = cavities_data.shape[0]
+    print("number of no cases before balancing: %d" % num_of_cav)
     interval_of_no_cases = int(num_of_cav / training_yes_X.shape[0])
     training_no_X = generate_training_no_X(total_data, cavities_data, n=10,
-                                           interval=interval_of_no_cases)
+                                           interval=interval_of_no_cases / 2)
     print("number of yes cases: %d" % training_yes_X.shape[0])
     print("number of no cases: %d" % training_no_X.shape[0])
     training_no_y = generate_training_no_y(training_no_X.shape[0])
