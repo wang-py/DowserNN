@@ -173,7 +173,8 @@ def plot_loss_history(history, train_pdb, val_pdb):
     plt.show()
 
 
-def build_NN(num_of_layers: int, N: int, input_dim: int, hidden_dim: int, learning_rate: float):
+def build_NN(num_of_layers: int, N: int, input_dim: int, hidden_dim: int,
+             learning_rate: float):
     """
     function that builds the neural network
     ----------------------------------------------------------------------------
