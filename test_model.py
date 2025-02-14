@@ -1,19 +1,27 @@
 import numpy as np
-import sys
-from keras.models import Sequential
-from keras.layers import Dense
-from keras.optimizers import Adam
 from keras import utils
 from keras import saving
 import tensorflow as tf
 import matplotlib.pyplot as plt
+import argparse
+
+parser = argparse.ArgumentParser(
+        prog='test_model.py',
+        description='script that tests neural network model prediction\
+                accuracy',
+        )
+parser.add_argument('-t', '--test_file', type=str)
+parser.add_argument('-m', '--model', type=str)
+
 
 # make sure results are reproducible
 seed_val = 1029
 utils.set_random_seed(seed_val)
 
 
-def plot_model_accuracy(accuracy_values):
+def plot_model_accuracy(accuracy_values, sorted_val=True):
+    if sorted_val:
+        accuracy_values = np.sort(accuracy_values)
     accuracy_threshold = 0.5
     num_above_threshold = np.sum(accuracy_values > accuracy_threshold)
     num_of_water = accuracy_values.shape[0]
@@ -56,8 +64,12 @@ def get_low_accuracy_waters(accuracy_values):
 
 if __name__ == "__main__":
     # Generate training and validation data
-    X_yes_file = sys.argv[1]
-    y_yes_file = sys.argv[2]
+    args = parser.parse_args()
+    X_yes_file_suffix = "_CI_X_yes.npy"
+    y_yes_file_suffix = "_CI_y_yes.npy"
+    X_yes_file = args.test_file + X_yes_file_suffix
+    y_yes_file = args.test_file + y_yes_file_suffix
+
     X_yes = np.load(X_yes_file)
     y_yes = np.load(y_yes_file)
 
@@ -67,7 +79,7 @@ if __name__ == "__main__":
     # record weights during each training iteration
     # Create a neural network model
     try:
-        model = saving.load_model('test_data/DowserNN.keras')
+        model = saving.load_model(args.model)
     except ValueError:
         print("No exising model found")
         exit()
@@ -87,5 +99,4 @@ if __name__ == "__main__":
     # plot confidence for water molecules
     accuracy_values = get_model_accuracy(model, X_validate, y_validate)
     get_low_accuracy_waters(accuracy_values)
-    plot_model_accuracy(np.sort(accuracy_values))
-    # print(np.sort(accuracy_values)[0])
+    plot_model_accuracy(accuracy_values)
