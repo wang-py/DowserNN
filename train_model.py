@@ -156,11 +156,18 @@ def plot_loss_history(history, train_pdb, val_pdb):
     """
     fig, ax = plt.subplots(figsize=(8, 6))
     training_loss = history.history['loss']
-    validation_loss = history.history['val_loss']
+    # check if there is validation loss
+    try:
+        validation_loss = history.history['val_loss']
+    except KeyError:
+        print('No test set used')
+        validation_loss = None
+
     ax.plot(training_loss, 'b-', label='training loss '
             + os.path.basename(train_pdb))
-    ax.plot(validation_loss, 'r-', label='validation loss '
-            + os.path.basename(val_pdb))
+    if validation_loss:
+        ax.plot(validation_loss, 'r-', label='validation loss '
+                + os.path.basename(val_pdb))
     ax.set_xlabel('Epoch')
     ax.set_ylabel('Loss')
     # ax.axhline(training_loss, color='b', linestyle='--',
@@ -259,7 +266,7 @@ if __name__ == "__main__":
     X_data = tf.convert_to_tensor(X)
     y_data = tf.convert_to_tensor(y)
     input_dim = X_data.shape[1]
-    hidden_dim = 64
+    hidden_dim = 8
     N = X_data.shape[0]
     # if not testing with another structure
     if testing_pdb is not None:
@@ -270,10 +277,16 @@ if __name__ == "__main__":
         X_test = tf.convert_to_tensor(np.load(X_file_test))
         y_test = tf.convert_to_tensor(np.load(y_file_test))
     else:
-        X_train, y_train, X_test, y_test =\
-            generate_train_test_set(X_data, y_data,
-                                    percent=testing_percentage)
         testing_pdb = training_pdb
+        if testing_percentage != 0:
+            X_train, y_train, X_test, y_test =\
+                generate_train_test_set(X_data, y_data,
+                                        percent=testing_percentage)
+        else:
+            X_train = X_data
+            y_train = y_data
+            X_test = None
+            y_test = None
     X_yes_file = X_file.split('.')[0] + '_yes.npy'
     y_yes_file = y_file.split('.')[0] + '_yes.npy'
     X_validate = tf.convert_to_tensor(np.load(X_yes_file))
@@ -281,7 +294,7 @@ if __name__ == "__main__":
 
     # record weights during each training iteration
     # Create a neural network model
-    num_of_layers = 3
+    num_of_layers = 2
     callback = weights_visualization_callback(num_of_layers)
     try:
         model = saving.load_model('test_data/DowserNN.keras')
@@ -290,10 +303,15 @@ if __name__ == "__main__":
         print("No exising model found, creating a new model")
         model = build_NN(num_of_layers, N, input_dim, hidden_dim,
                          learning_rate=0.0005)
-    epochs = 30
+    epochs = 100
     # Train the model
-    history = model.fit(X_train, y_train, epochs=epochs, batch_size=32,
-                        validation_data=(X_test, y_test), callbacks=callback)
+    if X_test is not None:
+        history = model.fit(X_train, y_train, epochs=epochs, batch_size=32,
+                            validation_data=(X_test, y_test),
+                            callbacks=callback)
+    else:
+        history = model.fit(X_train, y_train, epochs=epochs, batch_size=32,
+                            callbacks=callback)
     np.set_printoptions(precision=4, suppress=True)
 
     # plot training loss
