@@ -90,12 +90,11 @@ def find_n_nearest_atoms(water, atoms, n):
     search_range = 15
     atoms_within_range = atoms_with_dist[np.where(atoms_with_dist[:, -1] <
                                                   search_range)]
-    if atoms_within_range.shape[0] >= n:
-        atoms_sorted = atoms_within_range[atoms_within_range[:, -1].argsort()]
     # if there are not enough atoms within range
-    else:
+    if atoms_within_range.shape[0] < n:
         atoms_within_range = atoms_with_dist[np.where(atoms_with_dist[:, -1] <
                                                       search_range * 2)]
+    atoms_sorted = atoms_within_range[atoms_within_range[:, -1].argsort()]
 
     n_nearest_atoms = atoms_sorted[1:n + 1]
     return n_nearest_atoms
