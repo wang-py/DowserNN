@@ -39,18 +39,19 @@ def plot_model_accuracy(accuracy_values, sorted_val=True):
     pass
 
 
-def get_boltzmann_probability(energies):
-    R = 8.314 / 4.184 / 1000  # kcal/molK
-    T = 300  # K
-    RT = R * T
-    return np.exp(-energies / RT)
+def gaussian(energies, cutoff=-4):
+    return np.exp(-(cutoff - energies) ** 2)
 
 
-def plot_water_data(acc_and_energies, sorted_by_acc=True):
+def plot_water_data(acc_and_energies, sorted_by='accuracy'):
     fig, ax = plt.subplots(3, 1, figsize=(8, 6))
-    if sorted_by_acc:
+    if sorted_by == 'accuracy':
         acc_and_energies = acc_and_energies[
             acc_and_energies[:, 0].argsort()
+            ]
+    elif sorted_by == 'energy':
+        acc_and_energies = acc_and_energies[
+            acc_and_energies[:, 1].argsort()
             ]
 
     accuracy_values = acc_and_energies[:, 0]
@@ -59,7 +60,7 @@ def plot_water_data(acc_and_energies, sorted_by_acc=True):
     num_above_threshold_acc = np.sum(accuracy_values > accuracy_threshold)
     num_of_water = accuracy_values.shape[0]
     percent_above_threshold_acc = num_above_threshold_acc / num_of_water
-    energy_threshold = -10
+    energy_threshold = -4
     num_above_threshold_E = np.sum(water_energies > energy_threshold)
     percent_above_threshold_E = num_above_threshold_E / num_of_water
     ax[0].bar(np.arange(num_of_water), accuracy_values)
@@ -75,9 +76,9 @@ def plot_water_data(acc_and_energies, sorted_by_acc=True):
     ax[1].set_ylabel("energy [kCal/mol]")
     ax[1].legend()
     # ax[0].set_xlabel("water index")
-    P = get_boltzmann_probability(water_energies)
+    P = gaussian(water_energies, cutoff=energy_threshold)
     ax[2].bar(np.arange(num_of_water), P)
-    ax[2].set_ylabel("probability in boltzmann distribution")
+    ax[2].set_ylabel("probability")
     # ax[1].legend()
     plt.xlabel("water index")
     plt.show()
@@ -149,4 +150,4 @@ if __name__ == "__main__":
     acc_and_energies = np.c_[accuracy_values, dowser_energies]
     get_low_accuracy_waters(accuracy_values)
     plot_model_accuracy(accuracy_values)
-    plot_water_data(acc_and_energies)
+    plot_water_data(acc_and_energies, sorted_by='energy')
