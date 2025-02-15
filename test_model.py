@@ -11,6 +11,7 @@ parser = argparse.ArgumentParser(
                 accuracy',
         )
 parser.add_argument('-t', '--test_file', type=str)
+parser.add_argument('-w', '--water_pdb', type=str)
 parser.add_argument('-m', '--model', type=str)
 
 
@@ -34,6 +35,51 @@ def plot_model_accuracy(accuracy_values, sorted_val=True):
     ax.set_xlabel("water index")
     ax.set_ylabel("confidence")
     ax.legend()
+    plt.show()
+    pass
+
+
+def get_boltzmann_probability(energies):
+    R = 8.314 / 4.184 / 1000  # kcal/molK
+    T = 300  # K
+    RT = R * T
+    return np.exp(-energies / RT)
+
+
+def plot_water_data(acc_and_energies, sorted_by_acc=True):
+    fig, ax = plt.subplots(3, 1, figsize=(8, 6))
+    if sorted_by_acc:
+        acc_and_energies = acc_and_energies[
+            acc_and_energies[:, 0].argsort()
+            ]
+
+    accuracy_values = acc_and_energies[:, 0]
+    water_energies = acc_and_energies[:, 1]
+    accuracy_threshold = 0.5
+    num_above_threshold_acc = np.sum(accuracy_values > accuracy_threshold)
+    num_of_water = accuracy_values.shape[0]
+    percent_above_threshold_acc = num_above_threshold_acc / num_of_water
+    energy_threshold = -10
+    num_above_threshold_E = np.sum(water_energies > energy_threshold)
+    percent_above_threshold_E = num_above_threshold_E / num_of_water
+    ax[0].bar(np.arange(num_of_water), accuracy_values)
+    ax[0].axhline(accuracy_threshold, color='k', linestyle='--',
+                  label=f'accuracy threshold = {accuracy_threshold}\n' +
+                  f'% water above threshold: {percent_above_threshold_acc:.0%}')
+    ax[0].set_ylabel("confidence")
+    ax[1].bar(np.arange(num_of_water), water_energies)
+    ax[1].axhline(energy_threshold, color='k', linestyle='--',
+                  label=f'energy threshold = {energy_threshold} kCal/mol\n' +
+                  f'% water above threshold: {percent_above_threshold_E:.0%}')
+    # ax[0].set_xlabel("water index")
+    ax[1].set_ylabel("energy [kCal/mol]")
+    ax[1].legend()
+    # ax[0].set_xlabel("water index")
+    P = get_boltzmann_probability(water_energies)
+    ax[2].bar(np.arange(num_of_water), P)
+    ax[2].set_ylabel("probability in boltzmann distribution")
+    # ax[1].legend()
+    plt.xlabel("water index")
     plt.show()
     pass
 
@@ -62,6 +108,14 @@ def get_low_accuracy_waters(accuracy_values):
     np.savetxt('low_accuracy_water.txt', np.array(entry), fmt='%s')
 
 
+def get_dowser_energies(water_pdb):
+    with open(water_pdb, 'r') as water:
+        data = water.readlines()
+        dowser_energies = [float(x[61:67]) for x in data]
+
+    return np.array(dowser_energies)
+
+
 if __name__ == "__main__":
     # Generate training and validation data
     args = parser.parse_args()
@@ -76,27 +130,23 @@ if __name__ == "__main__":
     X_validate = tf.convert_to_tensor(X_yes)
     y_validate = tf.convert_to_tensor(y_yes)
 
-    # record weights during each training iteration
-    # Create a neural network model
     try:
         model = saving.load_model(args.model)
     except ValueError:
         print("No exising model found")
         exit()
     np.set_printoptions(precision=4, suppress=True)
-    # print("expected output:\n", y_data)
-    # print("predicted output:\n", y_predicted)
+
+    if args.water_pdb:
+        dowser_energies = get_dowser_energies(args.water_pdb)
 
     # test with new data
     test_loss, accuracy = model.evaluate(X_validate, y_validate)
     print(f"test loss: {test_loss}")  # , test accuracy: {accuracy:.2%}")
-    # print("expected output:\n", y_test)
-    # print("predicted output:\n", y_validate)
-    # error_percent = np.sum(y_validate - y_test) / np.sum(y_test)
-
-    # plot training loss
 
     # plot confidence for water molecules
     accuracy_values = get_model_accuracy(model, X_validate, y_validate)
+    acc_and_energies = np.c_[accuracy_values, dowser_energies]
     get_low_accuracy_waters(accuracy_values)
     plot_model_accuracy(accuracy_values)
+    plot_water_data(acc_and_energies)
