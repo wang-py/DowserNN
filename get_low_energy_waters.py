@@ -22,8 +22,8 @@ def categorize_by_cutoff(dowser_data, EM_data, cutoff=-4):
 
 
 def write_water_to_file(output_filename: str, low_E, high_E):
-    np.savetxt(output_filename + '_low_E.pdb', low_E, fmt='%s')
-    np.savetxt(output_filename + '_high_E.pdb', high_E, fmt='%s')
+    np.savetxt(output_filename + '_low_E.pdb', low_E, fmt='%s', newline='')
+    np.savetxt(output_filename + '_high_E.pdb', high_E, fmt='%s', newline='')
 
 
 if __name__ == '__main__':
