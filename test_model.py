@@ -45,6 +45,7 @@ def gaussian(energies, cutoff=-4):
 
 def plot_water_data(acc_and_energies, sorted_by='accuracy'):
     fig, ax = plt.subplots(3, 1, figsize=(8, 6))
+    print(acc_and_energies)
     if sorted_by == 'accuracy':
         acc_and_energies = acc_and_energies[
             acc_and_energies[:, 0].argsort()
@@ -68,6 +69,7 @@ def plot_water_data(acc_and_energies, sorted_by='accuracy'):
                   label=f'accuracy threshold = {accuracy_threshold}\n' +
                   f'% water above threshold: {percent_above_threshold_acc:.0%}')
     ax[0].set_ylabel("confidence")
+    ax[0].legend()
     ax[1].bar(np.arange(num_of_water), water_energies)
     ax[1].axhline(energy_threshold, color='k', linestyle='--',
                   label=f'energy threshold = {energy_threshold} kCal/mol\n' +
@@ -77,9 +79,15 @@ def plot_water_data(acc_and_energies, sorted_by='accuracy'):
     ax[1].legend()
     # ax[0].set_xlabel("water index")
     P = gaussian(water_energies, cutoff=energy_threshold)
+    P_threshold = 0.5
+    num_above_threshold_P = np.sum(P > P_threshold)
+    percent_above_threshold_P = num_above_threshold_P / num_of_water
     ax[2].bar(np.arange(num_of_water), P)
+    ax[2].axhline(P_threshold, color='k', linestyle='--',
+                  label=f'probability threshold = {P_threshold}\n' +
+                  f'% water above threshold: {percent_above_threshold_P:.0%}')
     ax[2].set_ylabel("probability")
-    # ax[1].legend()
+    ax[2].legend()
     plt.xlabel("water index")
     plt.show()
     pass
@@ -150,4 +158,4 @@ if __name__ == "__main__":
     acc_and_energies = np.c_[accuracy_values, dowser_energies]
     get_low_accuracy_waters(accuracy_values)
     plot_model_accuracy(accuracy_values)
-    plot_water_data(acc_and_energies, sorted_by='energy')
+    plot_water_data(acc_and_energies, sorted_by='accuracy')
