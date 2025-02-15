@@ -13,6 +13,7 @@ parser = argparse.ArgumentParser(
 parser.add_argument('-t', '--test_file', type=str)
 parser.add_argument('-w', '--water_pdb', type=str)
 parser.add_argument('-m', '--model', type=str)
+parser.add_argument('-k', '--sort_key', type=str)
 
 
 # make sure results are reproducible
@@ -128,6 +129,8 @@ def get_dowser_energies(water_pdb):
 if __name__ == "__main__":
     # Generate training and validation data
     args = parser.parse_args()
+    if args.sort_key is None:
+        args.sort_key = 'accuracy'
     X_yes_file_suffix = "_CI_X_yes.npy"
     y_yes_file_suffix = "_CI_y_yes.npy"
     X_yes_file = args.test_file + X_yes_file_suffix
@@ -150,7 +153,7 @@ if __name__ == "__main__":
     if args.water_pdb:
         dowser_energies = get_dowser_energies(args.water_pdb)
         acc_and_energies = np.c_[accuracy_values, dowser_energies]
-        plot_water_data(acc_and_energies, sorted_by='accuracy')
+        plot_water_data(acc_and_energies, sorted_by=args.sort_key)
 
     # test with new data
     test_loss, accuracy = model.evaluate(X_validate, y_validate)
