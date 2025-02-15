@@ -120,7 +120,7 @@ def get_low_accuracy_waters(accuracy_values):
 def get_dowser_energies(water_pdb):
     with open(water_pdb, 'r') as water:
         data = water.readlines()
-        dowser_energies = [float(x[61:67]) for x in data]
+        dowser_energies = [float(x[60:67]) for x in data]
 
     return np.array(dowser_energies)
 
@@ -146,16 +146,16 @@ if __name__ == "__main__":
         exit()
     np.set_printoptions(precision=4, suppress=True)
 
+    accuracy_values = get_model_accuracy(model, X_validate, y_validate)
     if args.water_pdb:
         dowser_energies = get_dowser_energies(args.water_pdb)
+        acc_and_energies = np.c_[accuracy_values, dowser_energies]
+        plot_water_data(acc_and_energies, sorted_by='accuracy')
 
     # test with new data
     test_loss, accuracy = model.evaluate(X_validate, y_validate)
     print(f"test loss: {test_loss}")  # , test accuracy: {accuracy:.2%}")
 
     # plot confidence for water molecules
-    accuracy_values = get_model_accuracy(model, X_validate, y_validate)
-    acc_and_energies = np.c_[accuracy_values, dowser_energies]
-    get_low_accuracy_waters(accuracy_values)
+    # get_low_accuracy_waters(accuracy_values)
     plot_model_accuracy(accuracy_values)
-    plot_water_data(acc_and_energies, sorted_by='accuracy')
