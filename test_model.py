@@ -34,7 +34,7 @@ def plot_model_accuracy(accuracy_values, figtitle=None, sorted_val=True):
     ax.axhline(accuracy_threshold, color='k', linestyle='--',
                label=f'accuracy threshold = {accuracy_threshold}\n' +
                f'% water above threshold: {percent_above_threshold:.0%}')
-    ax.set_xlabel("water index")
+    ax.set_xlabel("index")
     ax.set_ylabel("confidence")
     ax.legend()
     pass
@@ -89,7 +89,7 @@ def plot_water_data(acc_and_energies, sorted_by='accuracy'):
                   f'% water above threshold: {percent_above_threshold_P:.0%}')
     ax[2].set_ylabel("probability")
     ax[2].legend()
-    plt.xlabel("index")
+    plt.xlabel("water index")
     plt.show()
     pass
 
