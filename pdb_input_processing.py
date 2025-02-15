@@ -553,6 +553,8 @@ if __name__ == '__main__':
     training_X, training_y = randomize_training_data(training_X, training_y)
     np.save(f'test_data/{pdb_name}_CI_X_yes.npy', training_yes_X)
     np.save(f'test_data/{pdb_name}_CI_y_yes.npy', training_yes_y)
+    np.save(f'test_data/{pdb_name}_CI_X_no.npy', training_no_X)
+    np.save(f'test_data/{pdb_name}_CI_y_no.npy', training_no_y)
     np.save(f'test_data/{pdb_name}_CI_X.npy', training_X)
     np.save(f'test_data/{pdb_name}_CI_y.npy', training_y)
     np.save(f'test_data/{pdb_name}_CI_analysis.npy', analysis_data)
