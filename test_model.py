@@ -21,7 +21,7 @@ seed_val = 1029
 utils.set_random_seed(seed_val)
 
 
-def plot_model_accuracy(accuracy_values, sorted_val=True):
+def plot_model_accuracy(accuracy_values, figtitle=None, sorted_val=True):
     if sorted_val:
         accuracy_values = np.sort(accuracy_values)
     accuracy_threshold = 0.5
@@ -29,6 +29,7 @@ def plot_model_accuracy(accuracy_values, sorted_val=True):
     num_of_water = accuracy_values.shape[0]
     percent_above_threshold = num_above_threshold / num_of_water
     fig, ax = plt.subplots(figsize=(8, 6))
+    ax.set_title(figtitle)
     ax.bar(np.arange(num_of_water), accuracy_values)
     ax.axhline(accuracy_threshold, color='k', linestyle='--',
                label=f'accuracy threshold = {accuracy_threshold}\n' +
@@ -36,7 +37,6 @@ def plot_model_accuracy(accuracy_values, sorted_val=True):
     ax.set_xlabel("water index")
     ax.set_ylabel("confidence")
     ax.legend()
-    plt.show()
     pass
 
 
@@ -89,7 +89,7 @@ def plot_water_data(acc_and_energies, sorted_by='accuracy'):
                   f'% water above threshold: {percent_above_threshold_P:.0%}')
     ax[2].set_ylabel("probability")
     ax[2].legend()
-    plt.xlabel("water index")
+    plt.xlabel("index")
     plt.show()
     pass
 
@@ -133,14 +133,22 @@ if __name__ == "__main__":
         args.sort_key = 'accuracy'
     X_yes_file_suffix = "_CI_X_yes.npy"
     y_yes_file_suffix = "_CI_y_yes.npy"
+    X_no_file_suffix = "_CI_X_no.npy"
+    y_no_file_suffix = "_CI_y_no.npy"
     X_yes_file = args.test_file + X_yes_file_suffix
     y_yes_file = args.test_file + y_yes_file_suffix
+    X_no_file = args.test_file + X_no_file_suffix
+    y_no_file = args.test_file + y_no_file_suffix
 
     X_yes = np.load(X_yes_file)
     y_yes = np.load(y_yes_file)
+    X_no = np.load(X_no_file)
+    y_no = np.load(y_no_file)
 
-    X_validate = tf.convert_to_tensor(X_yes)
-    y_validate = tf.convert_to_tensor(y_yes)
+    X_validate_yes = tf.convert_to_tensor(X_yes)
+    y_validate_yes = tf.convert_to_tensor(y_yes)
+    X_validate_no = tf.convert_to_tensor(X_no)
+    y_validate_no = tf.convert_to_tensor(y_no)
 
     try:
         model = saving.load_model(args.model)
@@ -149,16 +157,22 @@ if __name__ == "__main__":
         exit()
     np.set_printoptions(precision=4, suppress=True)
 
-    accuracy_values = get_model_accuracy(model, X_validate, y_validate)
+    accuracy_values_yes = get_model_accuracy(model,
+                                             X_validate_yes, y_validate_yes)
+    # flip the accuracy to reflect water prediction result
+    accuracy_values_no = 1 - get_model_accuracy(model,
+                                                X_validate_no, y_validate_no)
     if args.water_pdb:
         dowser_energies = get_dowser_energies(args.water_pdb)
-        acc_and_energies = np.c_[accuracy_values, dowser_energies]
+        acc_and_energies = np.c_[accuracy_values_yes, dowser_energies]
         plot_water_data(acc_and_energies, sorted_by=args.sort_key)
 
     # test with new data
-    test_loss, accuracy = model.evaluate(X_validate, y_validate)
+    test_loss, accuracy = model.evaluate(X_validate_yes, y_validate_yes)
     print(f"test loss: {test_loss}")  # , test accuracy: {accuracy:.2%}")
 
     # plot confidence for water molecules
-    # get_low_accuracy_waters(accuracy_values)
-    plot_model_accuracy(accuracy_values)
+    # get_low_accuracy_waters(accuracy_values_yes)
+    plot_model_accuracy(accuracy_values_yes, figtitle='tested with yes cases')
+    plot_model_accuracy(accuracy_values_no, figtitle='tested with no cases')
+    plt.show()
