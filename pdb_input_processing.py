@@ -66,7 +66,7 @@ def find_distances(water_coor, atoms_coords):
 
 def find_n_nearest_atoms(water, atoms, n):
     """
-    find n nearest atoms near any water
+    find n nearest atoms near any site including that site
     ----------------------------------------------------------------------------
     water: ndrray 1 x 7
     |A|A|R|R|X|Y|Z|
@@ -96,7 +96,8 @@ def find_n_nearest_atoms(water, atoms, n):
                                                       search_range * 2)]
     atoms_sorted = atoms_within_range[atoms_within_range[:, -1].argsort()]
 
-    n_nearest_atoms = atoms_sorted[1:n + 1]
+    # n nearest atoms including self
+    n_nearest_atoms = atoms_sorted[0:n + 1]
     return n_nearest_atoms
 
 
@@ -169,8 +170,8 @@ def generate_training_yes_X(waters, atoms, n):
     for i in range(W):
         n_nearest_atoms = find_n_nearest_atoms(waters[i], atoms, n)
         internal_coords = get_internal_coords(
-                n_nearest_atoms[:, -4:-1] - waters[i, -3:])
-        one_training_X = np.append(n_nearest_atoms[:, 0:4],
+                n_nearest_atoms[1:, -4:-1] - waters[i, -3:])
+        one_training_X = np.append(n_nearest_atoms[1:, 0:4],
                                    internal_coords, axis=1)
         training_X[i] = one_training_X.flatten()
 
@@ -200,12 +201,12 @@ def generate_water_analysis_data(waters_original, atoms_original, n):
         n_nearest_atoms = find_n_nearest_atoms(waters_original[i],
                                                atoms_original, n)
         internal_coords = get_internal_coords(
-                n_nearest_atoms[:, -4:-1] - waters_original[i, -3:])
-        one_analysis_data = np.append(n_nearest_atoms[:, 0:2],
+                n_nearest_atoms[0:n, -4:-1] - waters_original[i, -3:])
+        one_analysis_data = np.append(n_nearest_atoms[0:n, 0:2],
                                       internal_coords, axis=1)
         # add original xyz coords
         one_analysis_data = np.append(one_analysis_data,
-                                      n_nearest_atoms[:, -3:], axis=1)
+                                      n_nearest_atoms[0:n, -3:], axis=1)
         analysis_data[i] = one_analysis_data.flatten()
 
     return analysis_data
@@ -282,8 +283,8 @@ def generate_training_no_X(atoms, cavities, n, interval: int):
         HOH_check = n_nearest_atoms[:, 2:4] - HOH_encoding
         if not np.any(HOH_check == 0.0):
             internal_coords = get_internal_coords(
-                    n_nearest_atoms[:, -4:-1] - cavities[i, -3:])
-            one_training_X = np.append(n_nearest_atoms[:, 0:4],
+                    n_nearest_atoms[0:n, -4:-1] - cavities[i, -3:])
+            one_training_X = np.append(n_nearest_atoms[0:n, 0:4],
                                        internal_coords, axis=1)
             training_X.append(one_training_X.flatten())
 
