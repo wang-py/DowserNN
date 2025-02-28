@@ -62,12 +62,15 @@ def generate_train_test_set(X_data, y_data, percent: float):
     return train_X, train_y, test_X, test_y
 
 
-def plot_model_accuracy(accuracy_values):
+def plot_model_accuracy(accuracy_values, plot_title: str = 'model accuracy'):
     """
     function that plots the accuracy of water prediction
     ----------------------------------------------------------------------------
     accuracy_values: ndarray
     numpy array of accuracy values of water prediction
+
+    plot_title: str
+    title for the plot
     ----------------------------------------------------------------------------
     """
     accuracy_threshold = 0.5
@@ -78,9 +81,10 @@ def plot_model_accuracy(accuracy_values):
     ax.bar(np.arange(num_of_water), accuracy_values)
     ax.axhline(accuracy_threshold, color='k', linestyle='--',
                label=f'accuracy threshold = {accuracy_threshold}\n' +
-               f'% water above threshold: {percent_above_threshold:.0%}')
-    ax.set_xlabel("water index")
+               f'% data above threshold: {percent_above_threshold:.0%}')
+    ax.set_xlabel("data index")
     ax.set_ylabel("confidence")
+    ax.set_title(plot_title)
     ax.legend()
     plt.show()
     pass
@@ -294,7 +298,7 @@ if __name__ == "__main__":
 
     # record weights during each training iteration
     # Create a neural network model
-    num_of_layers = 2
+    num_of_layers = 1
     callback = weights_visualization_callback(num_of_layers)
     try:
         model = saving.load_model('test_data/DowserNN.keras')
@@ -303,7 +307,7 @@ if __name__ == "__main__":
         print("No exising model found, creating a new model")
         model = build_NN(num_of_layers, N, input_dim, hidden_dim,
                          learning_rate=0.0005)
-    epochs = 100
+    epochs = 150
     # Train the model
     if X_test is not None:
         history = model.fit(X_train, y_train, epochs=epochs, batch_size=32,
@@ -317,10 +321,21 @@ if __name__ == "__main__":
     # plot training loss
     plot_loss_history(history, training_pdb, testing_pdb)
 
+    # plot test accuracy
+    test_accuracies = get_model_accuracy(model, X_test, y_test)
+    get_low_accuracy_waters(test_accuracies)
+    plot_model_accuracy(np.sort(test_accuracies), 'reproducing test set')
+
+    # plot test accuracy
+    training_accuracies = get_model_accuracy(model, X_train, y_train)
+    get_low_accuracy_waters(training_accuracies)
+    plot_model_accuracy(np.sort(training_accuracies),
+                        'reproducing training set')
+
     # plot confidence for water molecules
     accuracy_values = get_model_accuracy(model, X_validate, y_validate)
     get_low_accuracy_waters(accuracy_values)
-    plot_model_accuracy(np.sort(accuracy_values))
+    plot_model_accuracy(np.sort(accuracy_values), 'reproducing water')
     # print(np.sort(accuracy_values)[0])
 
     # visualizing weights
@@ -331,4 +346,4 @@ if __name__ == "__main__":
     # save model
     if model_filename is None:
         model_filename = training_pdb + '.keras'
-    save_model(model, model_filename)
+    # save_model(model, model_filename)
