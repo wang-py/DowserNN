@@ -529,16 +529,24 @@ if __name__ == '__main__':
     total_data_original = np.append(water_data_original, protein_data_original,
                                     axis=0)
     print("Generating training data...")
+    scaling_factor = 100
+    print(f"Scaling factor for regularization is {scaling_factor}")
     starting_time = timeit.default_timer()
-    training_yes_X = generate_training_yes_X(water_data, total_data, n=10)
+    training_yes_X = generate_training_yes_X(water_data, total_data, n=10,
+                                             scaling_factor=scaling_factor)
     training_yes_y = generate_training_yes_y(water_data.shape[0])
     num_of_cav = cavities_data.shape[0]
     print("number of no cases before balancing: %d" % num_of_cav)
     interval_of_no_cases = int(num_of_cav / training_yes_X.shape[0])
     training_no_X = generate_training_no_X(total_data, cavities_data, n=10,
-                                           interval=interval_of_no_cases / 2)
+                                           interval=interval_of_no_cases / 2,
+                                           scaling_factor=scaling_factor)
     print("number of yes cases: %d" % training_yes_X.shape[0])
     print("number of no cases: %d" % training_no_X.shape[0])
+    print("max and min IC of yes cases: " +
+          f"{np.max(training_yes_X)}, {np.min(training_yes_X)}")
+    print("max and min IC of no cases: " +
+          f"{np.max(training_no_X)}, {np.min(training_no_X)}")
     training_no_y = generate_training_no_y(training_no_X.shape[0])
     training_X, training_y = combine_training_data(training_yes_X,
                                                    training_no_X,
