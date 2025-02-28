@@ -323,12 +323,10 @@ if __name__ == "__main__":
 
     # plot test accuracy
     test_accuracies = get_model_accuracy(model, X_test, y_test)
-    get_low_accuracy_waters(test_accuracies)
     plot_model_accuracy(np.sort(test_accuracies), 'reproducing test set')
 
     # plot test accuracy
     training_accuracies = get_model_accuracy(model, X_train, y_train)
-    get_low_accuracy_waters(training_accuracies)
     plot_model_accuracy(np.sort(training_accuracies),
                         'reproducing training set')
 
