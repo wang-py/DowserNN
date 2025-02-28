@@ -21,8 +21,7 @@ def get_internal_coords(relative_coors):
     Array of relative coordinates from water to any other atom
     ----------------------------------------------------------------------------
     Returns:
-    internal_coords: ndarray N x 3
-    internal coordinates based on relative positions
+    internal_coords: ndarray N x 3 internal coordinates based on relative positions
     """
     N = relative_coors.shape[0]
     internal_coords = np.zeros([N, 3])
@@ -148,7 +147,8 @@ def get_input_partitions(atoms, partitions=2):
     return atoms_partitions
 
 
-def generate_training_yes_X(waters, atoms, n):
+def generate_training_yes_X(waters, atoms, n: int = 10,
+                            scaling_factor: float = 10):
     """
     Generate X training data for yes cases for neural network
     ----------------------------------------------------------------------------
@@ -172,7 +172,7 @@ def generate_training_yes_X(waters, atoms, n):
         internal_coords = get_internal_coords(
                 n_nearest_atoms[1:, -4:-1] - waters[i, -3:])
         one_training_X = np.append(n_nearest_atoms[1:, 0:4],
-                                   internal_coords, axis=1)
+                                   internal_coords / scaling_factor, axis=1)
         training_X[i] = one_training_X.flatten()
 
     return training_X
@@ -245,7 +245,8 @@ def check_num_of_protein_atoms(atoms_partitions, atoms):
     return False
 
 
-def generate_training_no_X(atoms, cavities, n, interval: int):
+def generate_training_no_X(atoms, cavities, n: int = 10, interval: int = 4,
+                           scaling_factor: float = 10):
     """
     Generate X training data for no cases for neural network
     ----------------------------------------------------------------------------
@@ -280,12 +281,13 @@ def generate_training_no_X(atoms, cavities, n, interval: int):
     training_X = []
     for i in range(0, C, int(interval)):
         n_nearest_atoms = find_n_nearest_atoms(cavities[i], atoms, n)
-        HOH_check = n_nearest_atoms[:, 2:4] - HOH_encoding
+        HOH_check = n_nearest_atoms[0:n, 2:4] - HOH_encoding
         if not np.any(HOH_check == 0.0):
             internal_coords = get_internal_coords(
                     n_nearest_atoms[0:n, -4:-1] - cavities[i, -3:])
             one_training_X = np.append(n_nearest_atoms[0:n, 0:4],
-                                       internal_coords, axis=1)
+                                       internal_coords / scaling_factor,
+                                       axis=1)
             training_X.append(one_training_X.flatten())
 
     return np.array(training_X)
