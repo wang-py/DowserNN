@@ -182,7 +182,7 @@ def get_all_nth_closest_distances(input_pdbs, n):
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
-        print("Usage: python find_water_distances.py <pdb_file_path>")
+        print("Usage: python check_closest_atom.py <pdb_file_path>")
         sys.exit(1)
 
     pdb_file_path = sys.argv[1]
