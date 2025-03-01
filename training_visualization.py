@@ -74,11 +74,15 @@ class weights_history_visualizer:
             self.visualize_2d(interval, frametime)
 
     def visualize_2d(self, interval, frametime):
-        fig, ax = plt.subplots(1, self.num_of_layers,
-                               figsize=(6 * self.num_of_layers, 8))
-        fig.suptitle("weights in hidden layer over epochs")
         epochs = len(self.all_weights_history[0])
         # initialize plots
+        if self.num_of_layers == 1:
+            fig, ax = plt.subplots(figsize=(8, 8))
+            ax = [ax]
+        else:
+            fig, ax = plt.subplots(1, self.num_of_layers,
+                                   figsize=(6 * self.num_of_layers, 8))
+        fig.suptitle("weights in hidden layer over epochs")
         for j in range(self.num_of_layers):
             ax[j].remove()
             ax[j] = fig.add_subplot(1, self.num_of_layers, j + 1)
@@ -108,6 +112,8 @@ class weights_history_visualizer:
                                figsize=(6 * self.num_of_layers, 8))
         fig.suptitle("weights in hidden layer over epochs")
         epochs = len(self.all_weights_history[0])
+        if self.num_of_layers == 1:
+            ax = [ax]
         for j in range(self.num_of_layers - 1):
             ax[j].remove()
             ax[j] = fig.add_subplot(1, self.num_of_layers, j + 1,
