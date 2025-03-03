@@ -133,25 +133,20 @@ if __name__ == "__main__":
         args.sort_key = 'accuracy'
     X_yes_file_suffix = "_CI_X_yes.npy"
     y_yes_file_suffix = "_CI_y_yes.npy"
-    X_no_file_suffix = "_CI_X_no.npy"
-    y_no_file_suffix = "_CI_y_no.npy"
     X_yes_file = args.test_file + X_yes_file_suffix
     y_yes_file = args.test_file + y_yes_file_suffix
-    X_no_file = args.test_file + X_no_file_suffix
-    y_no_file = args.test_file + y_no_file_suffix
-
     X_yes = np.load(X_yes_file)
     y_yes = np.load(y_yes_file)
-    X_no = np.load(X_no_file)
-    y_no = np.load(y_no_file)
-
     X_validate_yes = tf.convert_to_tensor(X_yes)
     y_validate_yes = tf.convert_to_tensor(y_yes)
-    X_validate_no = tf.convert_to_tensor(X_no)
-    y_validate_no = tf.convert_to_tensor(y_no)
 
     try:
-        model = saving.load_model(args.model)
+        #model = saving.load_model(args.model)
+        f = open(args.model, 'r')
+        f.close()
+        from keras.models import load_model
+        model = load_model(args.model)
+        model.summary()
     except ValueError:
         print("No exising model found")
         exit()
@@ -159,9 +154,6 @@ if __name__ == "__main__":
 
     accuracy_values_yes = get_model_accuracy(model,
                                              X_validate_yes, y_validate_yes)
-    # flip the accuracy to reflect water prediction result
-    accuracy_values_no = 1 - get_model_accuracy(model,
-                                                X_validate_no, y_validate_no)
     if args.water_pdb:
         dowser_energies = get_dowser_energies(args.water_pdb)
         acc_and_energies = np.c_[accuracy_values_yes, dowser_energies]
@@ -174,5 +166,19 @@ if __name__ == "__main__":
     # plot confidence for water molecules
     # get_low_accuracy_waters(accuracy_values_yes)
     plot_model_accuracy(accuracy_values_yes, figtitle='tested with yes cases')
+    plt.show()
+
+    # 2) Test no-cases
+    X_no_file_suffix = "_CI_X_no.npy"
+    y_no_file_suffix = "_CI_y_no.npy"
+    X_no_file = args.test_file + X_no_file_suffix
+    y_no_file = args.test_file + y_no_file_suffix
+    X_no = np.load(X_no_file)
+    y_no = np.load(y_no_file)
+    X_validate_no = tf.convert_to_tensor(X_no)
+    y_validate_no = tf.convert_to_tensor(y_no)
+    # flip the accuracy to reflect water prediction result
+    accuracy_values_no = 1 - get_model_accuracy(model,
+                                                X_validate_no, y_validate_no)
     plot_model_accuracy(accuracy_values_no, figtitle='tested with no cases')
     plt.show()

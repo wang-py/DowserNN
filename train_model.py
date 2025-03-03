@@ -89,6 +89,33 @@ def plot_model_accuracy(accuracy_values, plot_title: str = 'model accuracy'):
     plt.show()
     pass
 
+def plot_dataset_prediction(model, X_data, y_data, plot_title: str = 'model accuracy'):
+    """
+    function that plots the accuracy of water prediction
+    ----------------------------------------------------------------------------
+    accuracy_values: ndarray
+    numpy array of accuracy values of water prediction
+    ----------------------------------------------------------------------------
+    """
+    accuracy_values = get_model_accuracy(model, X_data, y_data)
+
+    accuracy_values = np.sort(accuracy_values) # Sort values acscending
+
+    accuracy_threshold = 0.5
+    num_above_threshold = np.sum(accuracy_values > accuracy_threshold)
+    num_of_water = accuracy_values.shape[0]
+    percent_above_threshold = num_above_threshold / num_of_water
+    fig, ax = plt.subplots(figsize=(8, 6))
+    ax.bar(np.arange(num_of_water), accuracy_values)
+    ax.axhline(accuracy_threshold, color='k', linestyle='--',
+               label=f'accuracy threshold = {accuracy_threshold}\n' +
+               f'% water above threshold: {percent_above_threshold:.0%}')
+    plt.title(plot_title, fontsize=20, fontweight='bold')
+    ax.set_xlabel("Index of data point", fontweight='bold')
+    ax.set_ylabel("Confidence", fontweight='bold')
+    ax.legend()
+    plt.show()
+    pass
 
 def get_model_accuracy(model, X_validate, y_validate):
     """
@@ -115,7 +142,8 @@ def get_model_accuracy(model, X_validate, y_validate):
     accuracy_values = np.zeros(y_validate.shape[0])
     for i in range(accuracy_values.shape[0]):
         accuracy_values[i] = y_predicted[i].dot(y_validate[i].T)
-
+        #if i > -1 and i < 100: print(f"{i} predicted = {y_predicted[i]},  actual = {y_validate[i]}: accuracy_values = {accuracy_values[i]}")
+    print(f"Validation Set has {len(accuracy_values)} data points")
     return accuracy_values
 
 
@@ -183,6 +211,44 @@ def plot_loss_history(history, train_pdb, val_pdb):
     ax.legend()
     plt.show()
 
+class MinMaxNormalization(tf.keras.layers.Layer):
+    # MinMaxNormalization Class that normalizdes along ALL () or a specific axis (axis=0)
+    # Add Normalization Layer (aver-s.t.d.) https://www.architecture-performance.fr/ap_blog/saving-a-tf-keras-model-with-data-normalization/
+
+    def __init__(self, **kwargs):
+        super(MinMaxNormalization, self).__init__(**kwargs)
+    def call(self, inputs):
+        min_val = tf.reduce_min(inputs, axis=0)
+        max_val = tf.reduce_max(inputs, axis=0)
+        return (inputs - min_val) / (max_val - min_val + tf.keras.backend.epsilon())
+class MinMaxNormalization2(tf.keras.layers.Layer):
+    # MinMaxNormalization Class that normalizdes along ALL () or a specific axis (axis=0)
+    def __init__(self, axis=None, **kwargs):
+        super(MinMaxNormalization2, self).__init__(**kwargs)
+        self.axis = axis
+
+    def get_config(self):
+        config = super(MinMaxNormalization2, self).get_config()
+        config.update({
+            "axis": self.axis,
+        })
+        return config
+
+    def call(self, inputs):
+        min_val = tf.reduce_min(inputs, axis=self.axis, keepdims=True)
+        max_val = tf.reduce_max(inputs, axis=self.axis, keepdims=True)
+        return (inputs - min_val) / (max_val - min_val + tf.keras.backend.epsilon())
+def min_max_normalizing(data):
+    # Reduce along columns (axis=0)
+    min_val = tf.reduce_min(data, axis=0)
+    max_val = tf.reduce_max(data, axis=0)
+    delta = max_val - min_val
+    #print (f'min_val = {min_val}\nmax_val = {max_val}\nmax_val - min_val = {delta} ')
+    #print (data[:2,:])
+    # Avoid division by zero using np.where : norm_data = (data - min_val) / (max_val - min_val)
+    norm_data = np.where(delta != 0, (data - min_val) / delta, 0.0)
+    #print (norm_data[:2,:])
+    return norm_data
 
 def build_NN(num_of_layers: int, N: int, input_dim: int, hidden_dim: int,
              learning_rate: float):
@@ -211,6 +277,12 @@ def build_NN(num_of_layers: int, N: int, input_dim: int, hidden_dim: int,
 
     """
     model = Sequential()
+    # Add Normalization Layer (aver-s.t.d.) https://www.architecture-performance.fr/ap_blog/saving-a-tf-keras-model-with-data-normalization/
+    #model.add(tf.keras.layers.LayerNormalization()) # Add 141 trainable params
+    #model.add(tf.keras.layers.experimental.preprocessing.Normalization())   # Add 141 Non-trainable params
+    #norm_X = MinMaxNormalization(axis=0)  # SEACH "tensorflow normalization layer with min max value 2d array example"
+    #model.add(MinMaxNormalization(axis=0)) # Add normalization layer
+    #model.add(MinMaxNormalization()) # Add normalization layer
     model.add(
         Dense(
             hidden_dim,
@@ -266,6 +338,18 @@ if __name__ == "__main__":
     y_file = training_pdb + "_CI_y.npy"
     X = np.load(X_file)
     y = np.load(y_file)
+    #print(f"loaded y[0:10]:\n{y[0:10]}")
+
+    # # NORMALIZE X columns
+    # from sklearn.preprocessing import MinMaxScaler
+    # scaler = MinMaxScaler()
+    # norm_X = scaler.fit_transform(X)
+    # #print (f'sklearn.scaler {norm_X[:2,:]}')
+    # #norm_X = min_max_normalizing(X)
+    # #print (f'my min_max_norm: {norm_X[:2,:]}')
+    # #exit()
+    # X_data = tf.convert_to_tensor(norm_X)
+
     # spliting data into training set and testing set
     X_data = tf.convert_to_tensor(X)
     y_data = tf.convert_to_tensor(y)
@@ -291,23 +375,24 @@ if __name__ == "__main__":
             y_train = y_data
             X_test = None
             y_test = None
-    X_yes_file = X_file.split('.')[0] + '_yes.npy'
-    y_yes_file = y_file.split('.')[0] + '_yes.npy'
-    X_validate = tf.convert_to_tensor(np.load(X_yes_file))
-    y_validate = tf.convert_to_tensor(np.load(y_yes_file))
 
     # record weights during each training iteration
     # Create a neural network model
     num_of_layers = 1
     callback = weights_visualization_callback(num_of_layers)
     try:
-        model = saving.load_model('test_data/DowserNN.keras')
+        #model = saving.load_model('test_data/DowserNN.keras')
+        f = open('test_data/DowserNN.keras', 'r')
+        f.close()
+        from keras.models import load_model
+        model = load_model('test_data/DowserNN.keras')
         model.summary()
-    except ValueError:
+    except OSError:
         print("No exising model found, creating a new model")
+        print(f"TrainData_dim={N}, layers={num_of_layers}, hidden_dim={hidden_dim}")
         model = build_NN(num_of_layers, N, input_dim, hidden_dim,
                          learning_rate=0.0005)
-    epochs = 150
+    epochs = 50
     # Train the model
     if X_test is not None:
         history = model.fit(X_train, y_train, epochs=epochs, batch_size=32,
@@ -316,21 +401,30 @@ if __name__ == "__main__":
     else:
         history = model.fit(X_train, y_train, epochs=epochs, batch_size=32,
                             callbacks=callback)
+    # save model
+    if model_filename is None:
+        model_filename = training_pdb + '.keras'
+    save_model(model, model_filename)
+
     np.set_printoptions(precision=4, suppress=True)
 
     # plot training loss
     plot_loss_history(history, training_pdb, testing_pdb)
 
-    # plot test accuracy
+    # 1) plot test set accuracy
     test_accuracies = get_model_accuracy(model, X_test, y_test)
     plot_model_accuracy(np.sort(test_accuracies), 'reproducing test set')
 
-    # plot test accuracy
+    # 2) plot training set accuracy
     training_accuracies = get_model_accuracy(model, X_train, y_train)
     plot_model_accuracy(np.sort(training_accuracies),
                         'reproducing training set')
 
-    # plot confidence for water molecules
+    # 3) plot confidence for water molecules
+    X_yes_file = X_file.rsplit('.', 1)[0] + '_yes.npy'
+    y_yes_file = y_file.rsplit('.', 1)[0] + '_yes.npy'
+    X_validate = tf.convert_to_tensor(np.load(X_yes_file))
+    y_validate = tf.convert_to_tensor(np.load(y_yes_file))
     accuracy_values = get_model_accuracy(model, X_validate, y_validate)
     get_low_accuracy_waters(accuracy_values)
     plot_model_accuracy(np.sort(accuracy_values), 'reproducing water')
@@ -341,7 +435,3 @@ if __name__ == "__main__":
     weights_visualizer = weights_history_visualizer(weights_history, mode='2d')
     weights_visualizer.visualize(interval=10, frametime=200)
     # weights_visualizer.save('layer_visualization_8OM1.mp4')
-    # save model
-    if model_filename is None:
-        model_filename = training_pdb + '.keras'
-    # save_model(model, model_filename)
