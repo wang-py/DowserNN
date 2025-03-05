@@ -12,7 +12,7 @@ atom_types = {'C': 1, 'N': 2, 'O': 3, 'SD': 4, 'H': 5, 'CA': 6, 'CB': 7,
               'CG': 8, 'CD1': 9, 'CD2': 10, 'CE1': 11, 'CE2': 12, 'CZ': 13}
 
 
-def get_internal_coords(relative_coors):
+def get_internal_coords(relative_coors, scaling_factor: float = 100):
     """
     calculate internal coordinates based on relative vectors
     ----------------------------------------------------------------------------
@@ -38,7 +38,7 @@ def get_internal_coords(relative_coors):
                                        r_a.dot(r_b.T),
                                        r_a.dot(r_c.T)])
 
-    return internal_coords
+    return internal_coords / scaling_factor
 
 
 def find_distances(water_coor, atoms_coords):
@@ -1042,9 +1042,10 @@ def generate_no_X_clash(check_title, waters, protein, cutoff_clash, n = 10, pdb_
     waters_low_E = []
     for i in range(W):
         W_i = waters[i]
-        closest_atoms_P       = atoms_within_cutoff(W_i,                protein, cutoff)
-        closest_atoms_clash_P = atoms_within_cutoff(W_i, closest_atoms_P[:,:-1], cutoff_clash)
-
+        closest_atoms_P = atoms_within_cutoff(W_i, protein, cutoff)
+        closest_atoms_clash_P = atoms_within_cutoff(W_i,
+                                                    closest_atoms_P[:, :-1],
+                                                    cutoff_clash)
 
         if len(closest_atoms_P) == 0:
             points_no_P.append(waters[i,-3:])
@@ -1281,10 +1282,10 @@ if __name__ == '__main__':
     training_yes_X = generate_training_yes_X(water_OK, total_data, n=10)
     num_of_cav = cavities_data.shape[0]
     print("number of no cases before balancing: %d" % num_of_cav)
-    interval_of_no_cases = int(num_of_cav / water_data.shape[0])
+    interval_of_no_cases = 1  # int(num_of_cav / water_data.shape[0])
     #interval_of_no_cases = int(num_of_cav / training_yes_X.shape[0])
     training_no_X = generate_training_no_X(total_data, cavities_data, n=10,
-                                           interval=interval_of_no_cases / 2)
+                                           interval=interval_of_no_cases)
     print("number of yes cases: %d" % training_yes_X.shape[0])
     print("number of no cases: %d" % training_no_X.shape[0])
 
@@ -1357,6 +1358,12 @@ if __name__ == '__main__':
     np.save(f'train_data/{pdb_name}_CI_X_no_prot.npy', training_no_X_prot)
     np.save(f'train_data/{pdb_name}_CI_y_no_prot.npy', training_no_y_prot)
 
+    max_yes = np.max(training_yes_X)
+    min_yes = np.min(training_yes_X)
+    max_no = np.max(training_no_X)
+    min_no = np.min(training_no_X)
+    print(f'max and min of yes descriptors: {max_yes:.3f}, {min_yes:.3f}')
+    print(f'max and min of no descriptors: {max_no:.3f}, {min_no:.3f}')
     print(f'Last 5 descriptors: {training_no_X[-5:]}')
     print(f'Number of generated water sites: {len(training_yes_X)}')
     print(f'Number of generated NO water sites: {len(training_no_X)}')
