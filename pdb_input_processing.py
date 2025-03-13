@@ -13,7 +13,7 @@ atom_types = {'C': 1, 'N': 2, 'O': 3, 'SD': 4, 'H': 5, 'CA': 6, 'CB': 7,
               'CG': 8, 'CD1': 9, 'CD2': 10, 'CE1': 11, 'CE2': 12, 'CZ': 13}
 
 
-def get_internal_coords(relative_coors):
+def get_internal_coords(relative_coors, scaling_factor: float = 10):
     """
     calculate internal coordinates based on relative vectors
     ----------------------------------------------------------------------------
@@ -38,7 +38,7 @@ def get_internal_coords(relative_coors):
                                        r_a.dot(r_b.T),
                                        r_a.dot(r_c.T)])
 
-    return internal_coords
+    return internal_coords / scaling_factor
 
 
 def find_distances(water_coor, atoms_coords):
@@ -147,8 +147,7 @@ def get_input_partitions(atoms, partitions=2):
     return atoms_partitions
 
 
-def generate_training_yes_X(waters, atoms, n: int = 10,
-                            scaling_factor: float = 10):
+def generate_training_yes_X(waters, atoms, n: int = 10):
     """
     Generate X training data for yes cases for neural network
     ----------------------------------------------------------------------------
@@ -172,7 +171,7 @@ def generate_training_yes_X(waters, atoms, n: int = 10,
         internal_coords = get_internal_coords(
                 n_nearest_atoms[1:, -4:-1] - waters[i, -3:])
         one_training_X = np.append(n_nearest_atoms[1:, 0:4],
-                                   internal_coords / scaling_factor, axis=1)
+                                   internal_coords, axis=1)
         training_X[i] = one_training_X.flatten()
 
     return training_X
@@ -245,8 +244,7 @@ def check_num_of_protein_atoms(atoms_partitions, atoms):
     return False
 
 
-def generate_training_no_X(atoms, cavities, n: int = 10, interval: int = 4,
-                           scaling_factor: float = 10):
+def generate_training_no_X(atoms, cavities, n: int = 10, interval: int = 4):
     """
     Generate X training data for no cases for neural network
     ----------------------------------------------------------------------------
@@ -529,18 +527,16 @@ if __name__ == '__main__':
     total_data_original = np.append(water_data_original, protein_data_original,
                                     axis=0)
     print("Generating training data...")
-    scaling_factor = 100
+    scaling_factor = 10
     print(f"Scaling factor for regularization is {scaling_factor}")
     starting_time = timeit.default_timer()
-    training_yes_X = generate_training_yes_X(water_data, total_data, n=10,
-                                             scaling_factor=scaling_factor)
+    training_yes_X = generate_training_yes_X(water_data, total_data, n=10)
     training_yes_y = generate_training_yes_y(water_data.shape[0])
     num_of_cav = cavities_data.shape[0]
     print("number of no cases before balancing: %d" % num_of_cav)
     interval_of_no_cases = int(num_of_cav / training_yes_X.shape[0])
     training_no_X = generate_training_no_X(total_data, cavities_data, n=10,
-                                           interval=interval_of_no_cases / 2,
-                                           scaling_factor=scaling_factor)
+                                           interval=interval_of_no_cases / 2)
     print("number of yes cases: %d" % training_yes_X.shape[0])
     print("number of no cases: %d" % training_no_X.shape[0])
     print("max and min IC of yes cases: " +
