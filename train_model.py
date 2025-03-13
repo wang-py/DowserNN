@@ -392,7 +392,7 @@ if __name__ == "__main__":
         print(f"TrainData_dim={N}, layers={num_of_layers}, hidden_dim={hidden_dim}")
         model = build_NN(num_of_layers, N, input_dim, hidden_dim,
                          learning_rate=0.0005)
-    epochs = 50
+    epochs = 300
     # Train the model
     if X_test is not None:
         history = model.fit(X_train, y_train, epochs=epochs, batch_size=32,
