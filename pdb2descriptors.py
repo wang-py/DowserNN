@@ -1325,8 +1325,9 @@ if __name__ == '__main__':
 
     # Add clashed water to NO cases
     training_no_y_clash = generate_training_no_y(training_no_X_clash.shape[0])
-    training_X = np.append(training_X, training_no_X_clash, axis=0)
-    training_y = np.append(training_y, training_no_y_clash, axis=0)
+    if training_no_y_clash.any():
+        training_X = np.append(training_X, training_no_X_clash, axis=0)
+        training_y = np.append(training_y, training_no_y_clash, axis=0)
     # Add protein atom positions as water NO cases
     print('Generate proten NO cases y values')
     training_no_y_prot = generate_training_no_y(training_no_X_prot.shape[0])
