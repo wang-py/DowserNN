@@ -305,6 +305,7 @@ def build_NN(num_of_layers: int, N: int, input_dim: int, hidden_dim: int,
     model.add(Dense(2, activation="softmax"))
 
     # Compile the model
+    # model.compile(optimizer='rmsprop', loss='mse', metrics=['accuracy'])
     model.compile(optimizer=Adam(learning_rate=learning_rate),
                   loss="binary_crossentropy", metrics=['accuracy'])
     model.build((N, input_dim))
