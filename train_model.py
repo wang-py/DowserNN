@@ -125,7 +125,16 @@ def plot_model_accuracy(accuracy_values, plot_title: str = 'model accuracy'):
     num_of_water = accuracy_values.shape[0]
     percent_above_threshold = num_above_threshold / num_of_water
     fig, ax = plt.subplots(figsize=(8, 6))
-    ax.bar(np.arange(num_of_water), accuracy_values)
+    # adjust margins
+    plt.subplots_adjust(left=0.1, right=0.9, top=0.9, bottom=0.1)
+    acc_greater_than_90 = accuracy_values >= 0.9
+    acc_less_than_10 = accuracy_values < 0.1
+    acc_inconclusive = (accuracy_values < 0.9) * (accuracy_values >= 0.1)
+    acc_index = np.arange(num_of_water)
+    ax.bar(acc_index[acc_less_than_10], accuracy_values[acc_less_than_10])
+    ax.bar(acc_index[acc_inconclusive], accuracy_values[acc_inconclusive],
+           alpha=0.5)
+    ax.bar(acc_index[acc_greater_than_90], accuracy_values[acc_greater_than_90])
     ax.axhline(accuracy_threshold, color='k', linestyle='--',
                label=f'accuracy threshold = {accuracy_threshold}\n' +
                f'% data above threshold: {percent_above_threshold:.0%}')
@@ -153,6 +162,8 @@ def plot_dataset_prediction(model, X_data, y_data, plot_title: str = 'model accu
     num_of_water = accuracy_values.shape[0]
     percent_above_threshold = num_above_threshold / num_of_water
     fig, ax = plt.subplots(figsize=(8, 6))
+    # adjust margins
+    plt.subplots_adjust(left=0.1, right=0.9, top=0.9, bottom=0.1)
     ax.bar(np.arange(num_of_water), accuracy_values)
     ax.axhline(accuracy_threshold, color='k', linestyle='--',
                label=f'accuracy threshold = {accuracy_threshold}\n' +
