@@ -305,7 +305,6 @@ def build_NN(num_of_layers: int, N: int, input_dim: int, hidden_dim: int,
     model.add(Dense(2, activation="softmax"))
 
     # Compile the model
-    # model.compile(optimizer='rmsprop', loss='mse', metrics=['accuracy'])
     model.compile(optimizer=Adam(learning_rate=learning_rate),
                   loss="binary_crossentropy", metrics=['accuracy'])
     model.build((N, input_dim))
@@ -393,7 +392,7 @@ if __name__ == "__main__":
         print(f"TrainData_dim={N}, layers={num_of_layers}, hidden_dim={hidden_dim}")
         model = build_NN(num_of_layers, N, input_dim, hidden_dim,
                          learning_rate=0.0005)
-    epochs = 300
+    epochs = 50
     # Train the model
     if X_test is not None:
         history = model.fit(X_train, y_train, epochs=epochs, batch_size=32,

@@ -12,7 +12,7 @@ atom_types = {'C': 1, 'N': 2, 'O': 3, 'SD': 4, 'H': 5, 'CA': 6, 'CB': 7,
               'CG': 8, 'CD1': 9, 'CD2': 10, 'CE1': 11, 'CE2': 12, 'CZ': 13}
 
 
-def get_internal_coords(relative_coors, scaling_factor: float = 10):
+def get_internal_coords(relative_coors, scaling_factor: float = 100):
     """
     calculate internal coordinates based on relative vectors
     ----------------------------------------------------------------------------
@@ -1286,10 +1286,10 @@ if __name__ == '__main__':
     training_yes_X = generate_training_yes_X(water_OK, total_data, n=10)
     num_of_cav = cavities_data.shape[0]
     print("number of no cases before balancing: %d" % num_of_cav)
-    interval_of_no_cases = int(num_of_cav / water_data.shape[0])
+    interval_of_no_cases = 1  # int(num_of_cav / water_data.shape[0])
     #interval_of_no_cases = int(num_of_cav / training_yes_X.shape[0])
     training_no_X = generate_training_no_X(total_data, cavities_data, n=10,
-                                           interval=interval_of_no_cases / 2)
+                                           interval=interval_of_no_cases)
     print("number of yes cases: %d" % training_yes_X.shape[0])
     print("number of no cases: %d" % training_no_X.shape[0])
 
@@ -1325,9 +1325,8 @@ if __name__ == '__main__':
 
     # Add clashed water to NO cases
     training_no_y_clash = generate_training_no_y(training_no_X_clash.shape[0])
-    if training_no_y_clash.any():
-        training_X = np.append(training_X, training_no_X_clash, axis=0)
-        training_y = np.append(training_y, training_no_y_clash, axis=0)
+    training_X = np.append(training_X, training_no_X_clash, axis=0)
+    training_y = np.append(training_y, training_no_y_clash, axis=0)
     # Add protein atom positions as water NO cases
     print('Generate proten NO cases y values')
     training_no_y_prot = generate_training_no_y(training_no_X_prot.shape[0])
