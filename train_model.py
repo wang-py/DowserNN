@@ -61,53 +61,6 @@ def generate_train_test_set(X_data, y_data, percent: float):
 
     return train_X, train_y, test_X, test_y
 
-def split_randomize_train_test_set(X_data, y_data, w_data, percent: float):
-    """
-    generates training and testing sets from all input data, the percentage of
-    test data can be specified by "percent"
-    ----------------------------------------------------------------------------
-    X_data: ndarray
-    all input X
-
-    y_data: ndarray
-    all input y
-
-    w_data: ndarray
-    all input sample_weights
-
-    percent: float
-    percentage of testing data in all data
-    ----------------------------------------------------------------------------
-    Returns:
-    test_X: ndarray
-    X data for testing
-
-    test_y
-    y data for testing
-    """
-    index_range = X_data.shape[0]
-    indices = range(index_range)
-    num_of_test_pts = int(index_range * percent)
-    test_index = random.sample(indices, num_of_test_pts)
-    train_index = list(set(indices) - set(test_index))
-    
-    ## test_index = np.array(random.sample(indices, num_of_test_pts))
-    ## train_index = np.array(list(set(indices) - set(test_index)))
-    ## print(f'test_index[:30]: {test_index[:30]}')
-    ## print(f'test_index[num_of_test_pts-30:]: {test_index[num_of_test_pts-30:]}')
-    ## print(f'train_index[:30]: {train_index[:30]}')
-    ## print(f'train_index[num_of_test_pts-30:]: {train_index[num_of_test_pts-30:]}')
-    ## print(f'Num of Yes/No samples in the test_index: {np.sum(test_index < 2743)}(Yes), {np.sum(test_index >= 2743)}(No) ')
-    ## print(f'Num of Yes/No samples in the train_index: {np.sum(train_index < 2743)}(Yes), {np.sum(train_index >= 2743)}(No) ')
-    ## exit()
-    test_X = tf.gather(X_data, indices=test_index)
-    test_y = tf.gather(y_data, indices=test_index)
-    test_w = tf.gather(w_data, indices=test_index)
-    train_X = tf.gather(X_data, indices=train_index)
-    train_y = tf.gather(y_data, indices=train_index)
-    train_w = tf.gather(w_data, indices=train_index)
-
-    return train_X, train_y, train_w, test_X, test_y, test_w
 
 def plot_model_accuracy(accuracy_values, plot_title: str = 'model accuracy'):
     """
@@ -363,11 +316,9 @@ def build_NN(num_of_layers: int, N: int, input_dim: int, hidden_dim: int,
     model.add(Dense(2, activation="softmax"))
 
     # Compile the model
-    #model.compile(optimizer='rmsprop', loss='mse', metrics=['mae'], weighted_metrics=[])
-    #model.compile(optimizer='rmsprop', loss='mse', metrics=['accuracy'], weighted_metrics=[])
-    #model.compile(optimizer=Adam(learning_rate=learning_rate), loss='mse', metrics=['mae'])
+    # model.compile(optimizer='rmsprop', loss='mse', metrics=['accuracy'])
     model.compile(optimizer=Adam(learning_rate=learning_rate),
-                  loss="binary_crossentropy", metrics=['accuracy'], weighted_metrics=[])   # weighted_metrics=['binary_crossentropy']
+                  loss="binary_crossentropy", metrics=['accuracy'])
     model.build((N, input_dim))
 
     model.summary()
@@ -389,12 +340,7 @@ def save_model(model, output_filename: str):
 
 
 if __name__ == "__main__":
-    # NN model and training psarameters
-    num_of_layers = 1
-    hidden_dim = 8
-    epochs = 200
-
-    # Load training and validation data
+    # Generate training and validation data
     args = parser.parse_args()
     training_pdb = args.train_pdb
     testing_pdb = args.validate_pdb
@@ -405,14 +351,12 @@ if __name__ == "__main__":
     X = np.load(X_file)
     y = np.load(y_file)
     #print(f"loaded y[0:10]:\n{y[0:10]}")
-    #print(f'Last 2 descriptors: {X[-2:]}')
 
     # # NORMALIZE X columns
     # from sklearn.preprocessing import MinMaxScaler
     # scaler = MinMaxScaler()
     # norm_X = scaler.fit_transform(X)
-    # print (f'Original desc: {X[:2,:]}')
-    # print (f'sklearn.scaler {norm_X[:2,:]}')
+    # #print (f'sklearn.scaler {norm_X[:2,:]}')
     # #norm_X = min_max_normalizing(X)
     # #print (f'my min_max_norm: {norm_X[:2,:]}')
     # #exit()
@@ -422,28 +366,8 @@ if __name__ == "__main__":
     X_data = tf.convert_to_tensor(X)
     y_data = tf.convert_to_tensor(y)
     input_dim = X_data.shape[1]
+    hidden_dim = 8
     N = X_data.shape[0]
-    print(f'Loaded {N} descriptors of dimension {X_data.shape[1]}.')
-
-    # Generate weights to balance under represented water data set during NN fitting
-    represent_yes_data = 1.0 # representation of water data in the loss function compare to No-cases, 1 means the same, 0.5/2 means twice under-/over-represented.
-    #nYes = len(X_validate)
-    nYes = np.sum(y[:,0] == 1)
-    nNo  = np.sum(y[:,1] == 1)
-    if nNo + nYes != N:
-        print(f'ERROR: inconsistent y_data, number of Yes- and No-cases ({nYes}+{nNo}) is not equal to the total N = {N}.')
-        exit()
-    if nYes == 0 or nNo == 0:
-        print(f'ERROR: number of Yes- or No-cases cannot be ZERO, nYes = {nYes}, nNo = {nNo}.')
-        exit()
-    weight_yes_multiplier = represent_yes_data * float(nNo) / float(nYes)
-    w_data = np.where(y[:, 0] == 1, weight_yes_multiplier, 1.0) # apply weight_yes_multiplier for Yes-cases(y[:, 0] == 1), otherwise weight = 1.0.
-    # w_data = np.ones(N, dtype=float)
-    # w_data[:nYes] = w_data[:nYes] * weight_yes_multiplier
-    print(f'nYes = {nYes} nNo = {nNo} represent_yes_data = {represent_yes_data}: weight_yes_multiplier = {weight_yes_multiplier}')
-    print(f'w_data[{nYes-3}:{nYes+3}] = {w_data[nYes-3:nYes+3]}')
-    #print(f'y[{nYes-5}:{nYes+5}] = {y[nYes-5:nYes+5]}')
-
     # if not testing with another structure
     if testing_pdb is not None:
         X_train = X_data
@@ -455,28 +379,18 @@ if __name__ == "__main__":
     else:
         testing_pdb = training_pdb
         if testing_percentage != 0:
-            X_train, y_train, w_train, X_test, y_test, w_test =\
-                split_randomize_train_test_set(X_data, y_data, w_data,
-                                               percent=testing_percentage)
-            # X_train, y_train, X_test, y_test =\
-            #     generate_train_test_set(X_data, y_data,
-            #                             percent=testing_percentage)
+            X_train, y_train, X_test, y_test =\
+                generate_train_test_set(X_data, y_data,
+                                        percent=testing_percentage)
         else:
             X_train = X_data
             y_train = y_data
             X_test = None
             y_test = None
 
-    #nYes_train = int (nYes * (1.0-testing_percentage))
-    #nYes_test = int (nYes * testing_percentage)
-    nYes_train = np.sum(y_train[:,0] == 1)
-    nYes_test  = np.sum(y_test[:,0] == 1)
-    print(f'nYes_train = {nYes_train} nYes_test = {nYes_test}')
-    print(f'nTrain = {len(y_train)}, nWTrain = {len(w_train)}, nTest = {len(y_test)}:\nw_train[{nYes_train-10}:{nYes_train+10}] = {w_train[nYes_train-10:nYes_train+10]}')
-    print(f'nTest = {len(X_test)}, nWTest = {len(w_test)}, nTest = {len(y_test)}:\nw_test[{nYes_test-10}:{nYes_test+10}] = {w_test[nYes_test-10:nYes_test+10]}')
-
     # record weights during each training iteration
     # Create a neural network model
+    num_of_layers = 1
     callback = weights_visualization_callback(num_of_layers)
     try:
         #model = saving.load_model('test_data/DowserNN.keras')
@@ -487,16 +401,17 @@ if __name__ == "__main__":
         model.summary()
     except OSError:
         print("No exising model found, creating a new model")
-        print(f"TrainData_dim={len(y_train)}, layers={num_of_layers}, hidden_dim={hidden_dim}")
+        print(f"TrainData_dim={N}, layers={num_of_layers}, hidden_dim={hidden_dim}")
         model = build_NN(num_of_layers, N, input_dim, hidden_dim,
-                         learning_rate=0.001)
+                         learning_rate=0.0005)
+    epochs = 300
     # Train the model
     if X_test is not None:
-        history = model.fit(X_train, y_train, sample_weight = w_train, epochs=epochs, batch_size=32,
-                            validation_data=(X_test, y_test, w_test),
+        history = model.fit(X_train, y_train, epochs=epochs, batch_size=32,
+                            validation_data=(X_test, y_test),
                             callbacks=callback)
     else:
-        history = model.fit(X_train, y_train, sample_weight = w_train, epochs=epochs, batch_size=32,
+        history = model.fit(X_train, y_train, epochs=epochs, batch_size=32,
                             callbacks=callback)
     # save model
     if model_filename is None:
@@ -526,16 +441,6 @@ if __name__ == "__main__":
     get_low_accuracy_waters(accuracy_values)
     plot_model_accuracy(np.sort(accuracy_values), 'reproducing water')
     # print(np.sort(accuracy_values)[0])
-
-    # 4) plot confidence for No-cases
-    X_no_file = X_file.rsplit('.', 1)[0] + '_no.npy'
-    y_no_file = y_file.rsplit('.', 1)[0] + '_no.npy'
-    X_validate = tf.convert_to_tensor(np.load(X_no_file))
-    y_validate = tf.convert_to_tensor(np.load(y_no_file))
-    accuracy_values = get_model_accuracy(model, X_validate, y_validate)
-    get_low_accuracy_waters(accuracy_values)
-    plot_model_accuracy(np.sort(accuracy_values), 'reproducing no-cases')
-
 
     # visualizing weights
     weights_history = callback.get_weights()
