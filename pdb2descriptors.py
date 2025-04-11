@@ -12,7 +12,7 @@ atom_types = {'C': 1, 'N': 2, 'O': 3, 'SD': 4, 'H': 5, 'CA': 6, 'CB': 7,
               'CG': 8, 'CD1': 9, 'CD2': 10, 'CE1': 11, 'CE2': 12, 'CZ': 13}
 
 
-def get_internal_coords(relative_coors):
+def get_internal_coords(relative_coors, scaling_factor: float = 10):
     """
     calculate internal coordinates based on relative vectors
     ----------------------------------------------------------------------------
@@ -38,7 +38,7 @@ def get_internal_coords(relative_coors):
                                        r_a.dot(r_b.T),
                                        r_a.dot(r_c.T)])
 
-    return internal_coords
+    return internal_coords / scaling_factor
 
 
 def find_distances(water_coor, atoms_coords):
@@ -989,6 +989,7 @@ def check_num_of_protein_atoms(atoms_partitions, atoms):
     print(f"there are {num_of_atoms_in_partitions} atoms in partitions")
     return False
 
+
 def generate_training_no_X(atoms, cavities, n, interval: int):
     """
     Generate X training data for no cases for neural network
@@ -1091,7 +1092,7 @@ def add_rand_vector(atoms, length = 0.0, interval = 1):
     return pos_near_atoms
 
 
-def draw_distance_histogram(values, nbins, Title, low_val_mark=2.4, high_val_mark = 3.5):
+def draw_distance_histogram(values, nbins, Title, low_val_mark=2.4, high_val_mark=3.5):
     # Plotting a basic histogram
     import matplotlib.pyplot as plt
     n, bins, patches = plt.hist(values, bins=nbins, color='skyblue', edgecolor='black')
@@ -1106,7 +1107,7 @@ def draw_distance_histogram(values, nbins, Title, low_val_mark=2.4, high_val_mar
     plt.ylabel('Frequency', fontweight='bold')
     plt.title(Title, fontweight='bold')
     # Display the plot
-    plt.show() 
+    plt.show()
 
 def check_water_clashes(check_title, waters, protein, cutoff_clash, n = 10, pdb_idx_shift = 0):
     """
@@ -1204,9 +1205,10 @@ def generate_no_X_clash(check_title, waters, protein, cutoff_clash, n = 10, pdb_
     waters_low_E = []
     for i in range(W):
         W_i = waters[i]
-        closest_atoms_P       = atoms_within_cutoff(W_i,                protein, cutoff)
-        closest_atoms_clash_P = atoms_within_cutoff(W_i, closest_atoms_P[:,:-1], cutoff_clash)
-
+        closest_atoms_P = atoms_within_cutoff(W_i, protein, cutoff)
+        closest_atoms_clash_P = atoms_within_cutoff(W_i,
+                                                    closest_atoms_P[:, :-1],
+                                                    cutoff_clash)
 
         if len(closest_atoms_P) == 0:
             sites_no_P.append(waters[i,-3:])
@@ -1418,6 +1420,7 @@ def check_conserved_components(arr2d,arrname='arr2d'):
         zero_indices = np.where(delta == 0)[0]
         print(f'Indecies of conserved coordinates in the array "{arrname}":{zero_indices}')
 
+
 import argparse
 parser = argparse.ArgumentParser(
         prog='pdb2descriptors.py',
@@ -1425,6 +1428,7 @@ parser = argparse.ArgumentParser(
         )
 parser.add_argument('-p', '--input_pdb', type=str)
 parser.add_argument('-c', '--input_cavities', type=str)
+
 
 if __name__ == '__main__':
     # Generate training and validation data
@@ -1446,6 +1450,7 @@ if __name__ == '__main__':
     ##
     ## Generate Z Descriptors (default)
     ##
+
     water_OK, water_clash = check_water_clashes("water", water_data, protein_data, 2.3)
     #training_no_X_clash, water_OK = generate_no_X_clash("water", water_data, protein_data, 2.3)
 
@@ -1455,6 +1460,13 @@ if __name__ == '__main__':
     #training_no_X_prot = generate_training_no_X(total_data, sites_near_protein, n=10,interval=20)
 
     #training_yes_X = generate_training_yes_X(water_OK, total_data, n=10)
+
+    training_no_X_clash, water_OK = generate_no_X_clash("water", water_data,
+                                                        protein_data, 2.3)
+    site_near_protein = add_rand_vector(protein_data, 0.5)
+    training_no_X_prot = generate_training_no_X(total_data, site_near_protein,
+                                                n=10, interval=10)
+
 
 
     #training_yes_X = generate_Z_descriptors(water_data, total_data, n=10)
@@ -1494,6 +1506,12 @@ if __name__ == '__main__':
     ##   checkZERO_AEV_descriptors('noW Cavity Grid', training_no_X)
 
 
+
+    training_yes_y = generate_training_yes_y(water_OK.shape[0])
+    training_no_y = generate_training_no_y(training_no_X.shape[0])
+    #exit()
+
+
     training_yes_y = generate_training_yes_y(training_yes_X.shape[0])
     training_no_y  = generate_training_no_y(training_no_X.shape[0])
     # training_X, training_y = combine_training_data(training_yes_X,
@@ -1504,11 +1522,18 @@ if __name__ == '__main__':
     training_y = np.append(training_yes_y, training_no_y, axis=0)
 
     # Add clashed water to NO cases
-    training_no_y_clash  = generate_training_no_y(training_no_X_clash.shape[0])
-    training_X = np.append(training_X, training_no_X_clash, axis=0)
-    training_y = np.append(training_y, training_no_y_clash, axis=0)
+    training_no_y_clash = generate_training_no_y(training_no_X_clash.shape[0])
+    if training_no_y_clash.any():
+        training_X = np.append(training_X, training_no_X_clash, axis=0)
+        training_y = np.append(training_y, training_no_y_clash, axis=0)
     # Add protein atom positions as water NO cases
+
     training_no_y_prot  = generate_training_no_y(training_no_X_prot.shape[0])
+
+    print('Generate proten NO cases y values')
+    training_no_y_prot = generate_training_no_y(training_no_X_prot.shape[0])
+    print('Finished proten NO cases y values')
+
     training_X = np.append(training_X, training_no_X_prot, axis=0)
     training_y = np.append(training_y, training_no_y_prot, axis=0)
     # training_X, training_y = combine_training_data(training_X,
@@ -1540,6 +1565,12 @@ if __name__ == '__main__':
     np.save(f'train_data/{pdb_name}_CI_X_no_prot.npy', training_no_X_prot)
     np.save(f'train_data/{pdb_name}_CI_y_no_prot.npy', training_no_y_prot)
 
+    max_yes = np.max(training_yes_X)
+    min_yes = np.min(training_yes_X)
+    max_no = np.max(training_no_X)
+    min_no = np.min(training_no_X)
+    print(f'max and min of yes descriptors: {max_yes:.3f}, {min_yes:.3f}')
+    print(f'max and min of no descriptors: {max_no:.3f}, {min_no:.3f}')
     print(f'Last 5 descriptors: {training_no_X[-5:]}')
     print(f'Number of generated water sites: {len(training_yes_X)}')
     print(f'Number of generated NO water sites: {len(training_no_X)}')
