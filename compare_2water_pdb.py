@@ -12,7 +12,7 @@ atom_types = {'C': 1, 'N': 2, 'O': 3, 'SD': 4, 'H': 5, 'CA': 6, 'CB': 7,
               'CG': 8, 'CD1': 9, 'CD2': 10, 'CE1': 11, 'CE2': 12, 'CZ': 13}
 
 
-def get_internal_coords(relative_coors, scaling_factor: float = 100):
+def get_internal_coords(relative_coors):
     """
     calculate internal coordinates based on relative vectors
     ----------------------------------------------------------------------------
@@ -38,7 +38,7 @@ def get_internal_coords(relative_coors, scaling_factor: float = 100):
                                        r_a.dot(r_b.T),
                                        r_a.dot(r_c.T)])
 
-    return internal_coords / scaling_factor
+    return internal_coords
 
 
 def find_distances(water_coor, atoms_coords):
@@ -95,9 +95,8 @@ def find_n_nearest_atoms(water, atoms, n):
     else:
         atoms_within_range = atoms_with_dist[np.where(atoms_with_dist[:, -1] <
                                                       search_range * 2)]
+
     n_nearest_atoms = atoms_sorted[1:n + 1]
-    if atoms_sorted[0,-1] > 0.0:   # !!! If nearest atoms are searched not for atoms
-            n_nearest_atoms = atoms_sorted[0:n]
     return n_nearest_atoms
 
 
@@ -521,6 +520,192 @@ def check_closest_env_distances(check_title,waters, atoms, pdb_idx_shift = 0):
 
     return
 
+def draw_distance_histogram(values, nbins, Title, low_val_mark=2.4, high_val_mark = 3.5):
+    # Plotting a basic histogram
+    import matplotlib.pyplot as plt
+    n, bins, patches = plt.hist(values, bins=nbins, color='skyblue', edgecolor='black')
+    # Color the bars based on a condition
+    for i, patch in enumerate(patches):
+        if bins[i] < low_val_mark:
+            patch.set_facecolor('red')
+        elif bins[i] > high_val_mark:
+            patch.set_facecolor('gray')
+    # Adding labels and title
+    plt.xlabel('Distance, (\u212B)', fontweight='bold')
+    plt.ylabel('Frequency', fontweight='bold')
+    plt.title(Title, fontweight='bold')
+    # Display the plot
+    plt.show()
+
+def check_water_positions(check_title, waters, protein, cutoff_clash, pdb_idx_shift = 0):
+    """
+    Generate X training data for yes cases for neural network
+    ----------------------------------------------------------------------------
+    waters: ndarray W x 7
+    Array of water information
+
+    protein: ndarray N x 7
+    Array of other atoms' information
+
+    n: int
+    Number of closest atoms
+    ----------------------------------------------------------------------------
+    Returns:
+    training_X: W x n x 7
+    training X data
+    """
+    cutoff = 4.5
+    cutoff_HB = 3.5
+    #cutoff_clash = 2.0
+    #cutoff_clash_WP = 2.2
+    #cutoff_clash_WW = 2.4
+
+    W = waters.shape[0]
+
+    points_no_P = []
+    points_no_W = []
+    points_clash_P = []
+    points_clash_W= []
+    idx_no_P = []
+    idx_no_W = []
+    idx_clash_P = []
+    idx_clash_W = []
+    dist_P = []
+    dist_W = []
+    for i in range(W):
+        W_i = waters[i]
+        closest_atoms_P       = atoms_within_cutoff(W_i,                protein, cutoff)
+        closest_atoms_W       = atoms_within_cutoff(W_i,                 waters, cutoff)
+        closest_atoms_HB      = atoms_within_cutoff(W_i, closest_atoms_P[:,:-1], cutoff_HB)
+        closest_atoms_clash_P = atoms_within_cutoff(W_i, closest_atoms_P[:,:-1], cutoff_clash)
+        closest_atoms_clash_W = atoms_within_cutoff(W_i, closest_atoms_W[:,:-1], cutoff_clash)
+
+        if len(closest_atoms_P) == 0:
+            points_no_P.append(waters[i,-3:])
+            idx_no_P.append(i + pdb_idx_shift)
+        else:
+            # SORT BY DISTANCE idx=[-1]
+            closest_atoms_P = closest_atoms_P[np.argsort(closest_atoms_P[:,-1])]
+            #if i > 2940:
+            if i < 5:
+                print(f'{closest_atoms_P[:,-1]}')
+            dist_P.append(closest_atoms_P[0,-1]) # idx=0 closest atom because closest_atoms is ordered array
+        if len(closest_atoms_W) == 0:
+            points_no_W.append(waters[i,-3:])
+            idx_no_W.append(i + pdb_idx_shift)
+        else:
+            # SORT BY DISTANCE idx=[-1]
+            closest_atoms_W = closest_atoms_W[np.argsort(closest_atoms_W[:,-1])]
+            dist_W.append(closest_atoms_W[0,-1]) # idx=0 closest atom because closest_atoms is ordered array
+
+        if len(closest_atoms_clash_P) > 0:
+            points_clash_P.append(waters[i,-3:])
+            idx_clash_P.append(i + pdb_idx_shift)
+        if len(closest_atoms_clash_W) > 0:
+            points_clash_W.append(waters[i,-3:])
+            idx_clash_W.append(i + pdb_idx_shift)
+        #print(f' Descriptors for water {i}:\n{G}')
+        #if i>3 : exit()
+        #if i > 2940: print(f' Descriptors for water {i}:\n{training_X[i]}')
+
+    #exit()
+    title = check_title.replace(' ', '_')
+    if len(points_no_P) > 0:
+        nprint = len(points_no_P)
+        print('-------------')
+        print(f'Found {nprint} positions of {check_title} with no Protein atoms within cutoff = {cutoff}')
+        if nprint > 30: nprint = 30
+        print(f'Indecies of first 30 sites with no P-Env within cutoff = {cutoff}:', idx_no_P[:nprint])
+    if len(points_no_P) + len(dist_P) < W:
+        print(f'ERROR: Number of waters with P-Env {len(dist_P)} and without p-Env {len(points_no_P)} within cutoff = {cutoff} IS != {W} ( total )')
+    if len(points_no_W) > 0:
+        nprint = len(points_no_W)
+        print('-------------')
+        print(f'Found {nprint} positions of {check_title} with no Water atoms within cutoff = {cutoff}')
+    if len(points_no_W) + len(dist_W) < W:
+        print(f'ERROR: Number of waters with W-Env {len(dist_W)} and without p-Env {len(points_no_W)} within cutoff = {cutoff} IS != {W} ( total )')
+
+    if len(points_clash_P) > 0:
+        nprint = len(points_clash_P)
+        print('-------------')
+        print(f'Found {nprint} positions of {check_title} with P-Env clash within cutoff_clash = {cutoff_clash}')
+        if nprint > 30: nprint = 30
+        print(f'Indecies of first 30 sites with P-Env clash within cutoff_clash = {cutoff_clash}:', idx_clash_P[:nprint])
+    if len(points_clash_W) > 0:
+        nprint = len(points_clash_W)
+        print('-------------')
+        print(f'Found {nprint} positions of {check_title} with W-Env clash within cutoff_clash = {cutoff_clash}')
+        if nprint > 30: nprint = 30
+        print(f'Indecies of first 30 sites with W-Env clash within cutoff_clash = {cutoff_clash}:', idx_clash_W[:nprint])
+
+    print(f'Computed distnaces for {len(dist_P)} water molecules and closest Protein atom within cutoff')
+    print(f'{dist_P[0:5]}')
+    dist_sorted = np.sort(dist_P)
+    print(f'{dist_sorted[0:100]}')
+
+    draw_distance_histogram(dist_P, 30, 'Distribution of Protein-Water Distances', cutoff_clash, cutoff_HB)
+    draw_distance_histogram(dist_W, 30, 'Distribution of Water-Water Distances',   cutoff_clash, cutoff_HB)
+
+    #exit()
+
+def check_water_shift(check_title,waters1, waters2):
+    """
+    Generate X training data for yes cases for neural network
+    ----------------------------------------------------------------------------
+    waters: ndarray W x 7
+    Array of water information
+
+    atoms: ndarray N x 7
+    Array of other atoms' information
+
+    n: int
+    Number of closest atoms
+    ----------------------------------------------------------------------------
+    Returns:
+    training_X: W x n x 7
+    training X data
+    """
+    large_shift = 1.0
+
+    W1 = waters1.shape[0]
+    W2 = waters2.shape[0]
+    if W1 != W2:
+        print(f'ERROR: Number of water1 molecules {W1} differs from the number of water2 molecules {W2}.')
+        exit()
+    print(f'Checking positions of {check_title} with criteria large_shift = {large_shift}A')
+    print(f'waters1: {waters1[0:5]}')
+    print(f'waters2: {waters2[0:5]}')
+    delta = waters2 - waters1
+    delta_sq = np.square(delta)
+    dist = np.sqrt(np.sum(delta_sq, axis=1))
+    #print(f'delta: {delta[0:5]}')
+    #print(f'delta_sq: {delta_sq[0:5]}')
+    print(f'Computed relative shifts for {len(dist)} water molecules')
+    print(f'{dist[0:5]}')
+
+    large_dist = []
+    idx_W_large_dist = []
+    for i in range(W1):
+      if dist[i] > large_shift:
+       large_dist.append(dist[i])
+       idx_W_large_dist.append(i)
+    
+    print(f'Found {len(large_dist)} positions shifted more than {large_shift}A')
+
+    # Plotting a basic histogram
+    import matplotlib.pyplot as plt
+    plt.hist(dist, bins=30, color='skyblue', edgecolor='black')
+    # Adding labels and title
+    plt.xlabel('shift, A')
+    plt.ylabel('Frequency')
+    plt.title('Shift Histogram')
+    # Display the plot
+    plt.show()
+
+    exit()
+
+    return
+
 def checkZERO_AEV_descriptors(siteTitle, training_X, pdb_idx_shift = 0):
     """
     Generate X training data for yes cases for neural network
@@ -588,15 +773,15 @@ def generate_Z_descriptors(waters, atoms, n):
     training_X: W x n x 7
     training X data
     """
-    normalization_coor = 10.0 # Normalization of descriptors
+
     W = waters.shape[0]
     N_descriptors = 7 * n
     training_X = np.zeros([W, N_descriptors])
     print(f'Number of descriptors per water molecule: {N_descriptors}')
     for i in range(W):
         n_nearest_atoms = find_n_nearest_atoms(waters[i], atoms, n)
-        rel_norm_coords = (n_nearest_atoms[:, -4:-1] - waters[i, -3:]) / normalization_coor # Normalized coordinates
-        internal_coords = get_internal_coords(rel_norm_coords)
+        internal_coords = get_internal_coords(
+                n_nearest_atoms[:, -4:-1] - waters[i, -3:])
         one_training_X = np.append(n_nearest_atoms[:, 0:4],
                                    internal_coords, axis=1)
         training_X[i] = one_training_X.flatten()
@@ -866,96 +1051,6 @@ def generate_training_yes_X(waters, atoms, n):
 
     return training_X
 
-def search_no_water_sites(atoms, cavities, n, interval: int):
-    """
-    Search for no water (within n closest atoms) sites in "cavities" points
-    ----------------------------------------------------------------------------
-    atoms: ndarray N x 7
-    Array of other atoms' information
-
-    cavities: ndarray N x 3
-    Array of cavity points in xyz
-
-    n: int
-    Number of closest atoms
-
-    interval: int
-    Interval between no cases
-    ----------------------------------------------------------------------------
-    Returns:
-    training_X: P x n x 7
-    training X data
-    """
-    C = cavities.shape[0]
-    HOH_encoding = feature_encoder_residue(residue_types['HOH'])
-    no_water_site = []
-    closest_at_dist =[]
-    for i in range(0, C, int(interval)):
-        n_nearest_atoms = find_n_nearest_atoms(cavities[i], atoms, n)
-        HOH_check = n_nearest_atoms[:, 2:4] - HOH_encoding
-        if not np.any(HOH_check == 0.0):
-            no_water_site.append(cavities[i])
-            #i_no = len(training_X)
-            #closest_at_dist.append(n_nearest_atoms[0, -1])
-            #print(f'cav_grid({i_no}) closest atom disdtance:{closest_at_dist[i_no - 1]}')
-            #if  i_no <=5 :
-            #    #print(f'i_no={i_no} at_no({i}) atoms[{i}, 0:4] = {atoms[i, 0:4]} n_nearest_atoms[:, 0:4]:\n {n_nearest_atoms[:, 0:4]}')
-            #    print(f'i_no={i_no} cav_grid({i}) = {cavities[i, 0:3]}:')
-            #    #print(f'i_no={i_no} at_no({i}) atoms[{i}, 0:4] = {atoms[i, 0:4]}:')
-            #    #print(f'training_no_X[{i_no - 1}]:\n {training_X[i_no - 1]}')
-            #    for a in range(n_nearest_atoms.shape[0]):
-            #        #print(f'wat({i}) n_nearest_atoms[{a}]: {n_nearest_atoms[a, 0:4]} {internal_coords[a, :]} {n_nearest_atoms[a, -1]}')
-            #        print(f'training_no_X[{i_no - 1}][{a}]: {training_X[i_no - 1][ a*7 : a*7 + 4]} {training_X[i_no - 1][ a*7+4 : a*7+7]} {n_nearest_atoms[a, -1]}')
-            #else:
-            #    exit()
-    #for k in range(i_no):
-    #    print(f'cav_grid({i}) closest atom disdtance:{closest_at_dist[k]}')
-        closest_at_dist.append(n_nearest_atoms[0, -1])
-        if  n_nearest_atoms[0, -1] > 10.0: print(f'Distances to 10 nearest_atoms with closest_at_dist>10A: {n_nearest_atoms[:, -1]}')
-    #print(f'Distances to nearest_atoms : {closest_at_dist[:100]}')
-    draw_distance_histogram(closest_at_dist, 100, 'Distribution of cavity NO-case Point-Atom(P,W) Distances', 2.3, 3.5)
-    print(f'Number of generated sites with NO water: {len(no_water_site)}')
-    return np.array(no_water_site)
-
-def generate_training_no_X(atoms, cavities, n, interval: int):
-    """
-    Generate X training data for no cases for neural network
-    ----------------------------------------------------------------------------
-    atoms: ndarray N x 7
-    Array of other atoms' information
-
-    cavities: ndarray N x 3
-    Array of cavity points in xyz
-
-    n: int
-    Number of closest atoms
-
-    interval: int
-    Interval between no cases
-    ----------------------------------------------------------------------------
-    Returns:
-    training_X: P x n x 7
-    training X data
-    """
-    C = cavities.shape[0]
-    HOH_encoding = feature_encoder_residue(residue_types['HOH'])
-    training_X = []
-    closest_at_dist =[]
-    for i in range(0, C, int(interval)):
-        n_nearest_atoms = find_n_nearest_atoms(cavities[i], atoms, n)
-        HOH_check = n_nearest_atoms[:, 2:4] - HOH_encoding
-        if not np.any(HOH_check == 0.0):
-            internal_coords = get_internal_coords(
-                    n_nearest_atoms[:, -4:-1] - cavities[i, -3:])
-            one_training_X = np.append(n_nearest_atoms[:, 0:4],
-                                       internal_coords, axis=1)
-            training_X.append(one_training_X.flatten())
-        closest_at_dist.append(n_nearest_atoms[0, -1])
-        if  n_nearest_atoms[0, -1] > 10.0: print(f'Distances to 10 nearest_atoms with closest_at_dist>10A: {n_nearest_atoms[:, -1]}')
-    #print(f'Distances to nearest_atoms : {closest_at_dist[:100]}')
-    draw_distance_histogram(closest_at_dist, 100, 'Distribution of cavity NO-case Point-Atom(P,W) Distances', 2.3, 3.5)
-    print(f'Number of generated sites with NO water: {len(training_X)}')
-    return np.array(training_X)
 
 def generate_training_yes_y(W):
     """
@@ -990,7 +1085,7 @@ def check_num_of_protein_atoms(atoms_partitions, atoms):
     return False
 
 
-def generate_training_no_X(atoms, cavities, n, interval: int):
+def generate_training_no_X(atoms, cavities, n):
     """
     Generate X training data for no cases for neural network
     ----------------------------------------------------------------------------
@@ -1002,19 +1097,26 @@ def generate_training_no_X(atoms, cavities, n, interval: int):
 
     n: int
     Number of closest atoms
-
-    interval: int
-    Interval between no cases
     ----------------------------------------------------------------------------
     Returns:
     training_X: P x n x 7
     training X data
     """
+    # print("Partitioning protein atoms...")
+    # atoms_partitions = get_input_partitions(atoms, partitions=2)
+    # print("Checking atom count in partitions...")
+    # is_same_count = check_num_of_protein_atoms(atoms_partitions, atoms)
+    # if is_same_count:
+    #     print("Partitioning successful")
+    # else:
+    #     print("Atom count error")
+    #     exit()
+    # num_of_partitions = len(atoms_partitions)
     C = cavities.shape[0]
     HOH_encoding = feature_encoder_residue(residue_types['HOH'])
     training_X = []
-    closest_at_dist =[]
-    for i in range(0, C, int(interval)):
+    closest_at_dist = []
+    for i in range(C):
         n_nearest_atoms = find_n_nearest_atoms(cavities[i], atoms, n)
         HOH_check = n_nearest_atoms[:, 2:4] - HOH_encoding
         if not np.any(HOH_check == 0.0):
@@ -1023,7 +1125,8 @@ def generate_training_no_X(atoms, cavities, n, interval: int):
             one_training_X = np.append(n_nearest_atoms[:, 0:4],
                                        internal_coords, axis=1)
             training_X.append(one_training_X.flatten())
-            #i_no = len(training_X)
+
+            i_no = len(training_X)
             #closest_at_dist.append(n_nearest_atoms[0, -1])
             #print(f'cav_grid({i_no}) closest atom disdtance:{closest_at_dist[i_no - 1]}')
             #if  i_no <=5 :
@@ -1038,12 +1141,25 @@ def generate_training_no_X(atoms, cavities, n, interval: int):
             #    exit()
     #for k in range(i_no):
     #    print(f'cav_grid({i}) closest atom disdtance:{closest_at_dist[k]}')
-        closest_at_dist.append(n_nearest_atoms[0, -1])
-        if  n_nearest_atoms[0, -1] > 10.0: print(f'Distances to 10 nearest_atoms with closest_at_dist>10A: {n_nearest_atoms[:, -1]}')
-    #print(f'Distances to nearest_atoms : {closest_at_dist[:100]}')
-    draw_distance_histogram(closest_at_dist, 100, 'Distribution of cavity NO-case Point-Atom(P,W) Distances', 2.3, 3.5)
-    print(f'Number of generated sites with NO water: {len(training_X)}')
+    print(f'Number of generated cites with NO water: {i_no}')
+    #exit()
     return np.array(training_X)
+    # for i in range(num_of_partitions):
+    #     partition = atoms_partitions[i]
+    #     num_atoms_in_box = partition.shape[0]
+    #     for j in range(num_atoms_in_box):
+    #         n_nearest_atoms = find_n_nearest_atoms(partition[j], partition, n)
+    #         internal_coords = get_internal_coords(
+    #                 n_nearest_atoms[:, -4:-1] - atoms[i, -3:])
+    #         one_training_X = np.append(n_nearest_atoms[:, 0:4],
+    #                                    internal_coords, axis=1)
+    #         training_X.append(one_training_X.flatten())
+
+    # if len(training_X) == P:
+    #     return training_X
+    # else:
+    #     print("Number of training X data and input mismatch")
+    #     exit()
 
 
 def generate_training_no_y(P):
@@ -1062,224 +1178,6 @@ def generate_training_no_y(P):
     training_y = np.append(zeros[:, np.newaxis], ones[:, np.newaxis], axis=1)
 
     return training_y
-
-
-def add_rand_vector(atoms, length = 0.0, interval = 1):
-    """
-    add random vectors to atom positions
-    ----------------------------------------------------------------------------
-    atoms: ndarray N x 7
-    Array of atoms' information
-    length: length of all random vectors
-    interval: int
-    Interval between no cases
-    ----------------------------------------------------------------------------
-    Returns:
-    pos_near_atoms: ndarray: N / interval x 7
-    positions near protein atoms
-    """
-    atoms = atoms[::int(interval)] # pick every nth element in a NumPy array 
-    if (length <= 0.0):
-        return atoms
-    random_vectors = np.random.rand(len(atoms), 3)
-    magnitudes = np.linalg.norm(random_vectors, axis=1, keepdims=True)
-    unit_vectors = random_vectors / magnitudes
-    pos_near_atoms = np.zeros([len(atoms), 7])
-    pos_near_atoms[:,-3:] = length * unit_vectors
-    pos_near_atoms = pos_near_atoms + atoms
-    #print(f'atoms:{atoms[:2]}')
-    #print(f'pos_near_atoms:{pos_near_atoms[:2]}')
-    return pos_near_atoms
-
-
-def draw_distance_histogram(values, nbins, Title, low_val_mark=2.4, high_val_mark=3.5):
-    # Plotting a basic histogram
-    import matplotlib.pyplot as plt
-    n, bins, patches = plt.hist(values, bins=nbins, color='skyblue', edgecolor='black')
-    # Color the bars based on a condition
-    for i, patch in enumerate(patches):
-        if bins[i] < low_val_mark:
-            patch.set_facecolor('red')
-        elif bins[i] > high_val_mark:
-            patch.set_facecolor('gray')
-    # Adding labels and title
-    plt.xlabel('Distance, (\u212B)', fontweight='bold')
-    plt.ylabel('Frequency', fontweight='bold')
-    plt.title(Title, fontweight='bold')
-    # Display the plot
-    plt.show()
-
-def check_water_clashes(check_title, waters, protein, cutoff_clash, n = 10, pdb_idx_shift = 0):
-    """
-    Check water clashes with protein atoms (dist < cutoff_clash)
-    ----------------------------------------------------------------------------
-    waters: ndarray W x 7
-    Array of water information
-
-    protein: ndarray N x 7
-    Array of other atoms' information
-
-    n: int
-    Number of closest atoms
-    ----------------------------------------------------------------------------
-    Returns:
-    training_X: W x n x 7
-    training X data
-    """
-    cutoff = 4.5
-    cutoff_HB = 3.5
-
-    W = waters.shape[0]
-
-    sites_no_P = []
-    sites_clash_P = []
-    idx_no_P = []
-    idx_clash_P = []
-    dist_P = []
-    water_ok = []
-    water_clash = []
-    for i in range(W):
-        W_i = waters[i]
-        closest_atoms_P       = atoms_within_cutoff(W_i,                protein, cutoff)
-        closest_atoms_clash_P = atoms_within_cutoff(W_i, closest_atoms_P[:,:-1], cutoff_clash)
-
-
-        if len(closest_atoms_P) == 0:
-            sites_no_P.append(waters[i,-3:])
-            idx_no_P.append(i + pdb_idx_shift)
-        else:
-            closest_atoms_P = closest_atoms_P[np.argsort(closest_atoms_P[:,-1])] # SORT BY DISTANCE idx=[-1]
-            dist_P.append(closest_atoms_P[0,-1]) # idx=0 closest atom because closest_atoms is ordered array
-
-        if len(closest_atoms_clash_P) > 0:
-            sites_clash_P.append(waters[i,-3:])
-            idx_clash_P.append(i + pdb_idx_shift)
-            water_clash.append(waters[i])
-        else:
-            water_ok.append(waters[i])
-
-    if len(water_clash) > 0:
-        nprint = len(water_clash)
-        print('-------------')
-        print(f'Found {nprint} {check_title} sites with P-Env clash within cutoff_clash = {cutoff_clash}')
-        print(f'Will use these {nprint} {check_title} sites as NO cases')
-        print(f'Number of remained water Yes cases after excluding {nprint} clashed sites is {len(water_ok)}.')
-        if nprint > 30: nprint = 30
-        print(f'Indecies of first 30 sites with P-Env clash within cutoff_clash = {cutoff_clash}:', idx_clash_P[:nprint])
-
-    print(f'Computed distnaces for {len(dist_P)} water molecules and closest Protein atom within cutoff')
-    print(f'{dist_P[0:5]}')
-    dist_sorted = np.sort(dist_P)
-    print(f'{dist_sorted[0:10]}')
-
-    draw_distance_histogram(dist_P, 30, 'Distribution of Protein-Water Distances', cutoff_clash, cutoff_HB)
-    return np.array(water_ok), np.array(water_clash)
-
-def generate_no_X_clash(check_title, waters, protein, cutoff_clash, n = 10, pdb_idx_shift = 0):
-    """
-    Generate X training data for yes cases for neural network
-    ----------------------------------------------------------------------------
-    waters: ndarray W x 7
-    Array of water information
-
-    protein: ndarray N x 7
-    Array of other atoms' information
-
-    n: int
-    Number of closest atoms
-    ----------------------------------------------------------------------------
-    Returns:
-    training_X: W x n x 7
-    training X data
-    """
-    cutoff = 4.5
-    cutoff_HB = 3.5
-
-    W = waters.shape[0]
-
-    sites_no_P = []
-    sites_clash_P = []
-    idx_no_P = []
-    idx_clash_P = []
-    dist_P = []
-    waters_low_E = []
-    for i in range(W):
-        W_i = waters[i]
-        closest_atoms_P = atoms_within_cutoff(W_i, protein, cutoff)
-        closest_atoms_clash_P = atoms_within_cutoff(W_i,
-                                                    closest_atoms_P[:, :-1],
-                                                    cutoff_clash)
-
-        if len(closest_atoms_P) == 0:
-            sites_no_P.append(waters[i,-3:])
-            idx_no_P.append(i + pdb_idx_shift)
-        else:
-            closest_atoms_P = closest_atoms_P[np.argsort(closest_atoms_P[:,-1])] # SORT BY DISTANCE idx=[-1]
-            dist_P.append(closest_atoms_P[0,-1]) # idx=0 closest atom because closest_atoms is ordered array
-
-        if len(closest_atoms_clash_P) > 0:
-            sites_clash_P.append(waters[i,-3:])
-            idx_clash_P.append(i + pdb_idx_shift)
-        else:
-            waters_low_E.append(waters[i])
-
-    if len(sites_clash_P) > 0:
-        nprint = len(sites_clash_P)
-        print('-------------')
-        print(f'Found {nprint} positions of {check_title} with P-Env clash within cutoff_clash = {cutoff_clash}')
-        print(f'Will use these {nprint} positions of clashed water as NO cases')
-        print(f'Number of remained water Yes cases after excluding {nprint} positions of clashed water is {len(waters_low_E)}.')
-        if nprint > 30: nprint = 30
-        print(f'Indecies of first 30 sites with P-Env clash within cutoff_clash = {cutoff_clash}:', idx_clash_P[:nprint])
-
-    print(f'Computed distnaces for {len(dist_P)} water molecules and closest Protein atom within cutoff')
-    print(f'{dist_P[0:5]}')
-    dist_sorted = np.sort(dist_P)
-    print(f'{dist_sorted[0:10]}')
-
-    draw_distance_histogram(dist_P, 30, 'Distribution of Protein-Water Distances', cutoff_clash, cutoff_HB)
-    #exit()
-    atoms= np.append(waters, protein, axis=0)
-    training_X = []
-    for i in range(len(sites_clash_P)):
-        n_nearest_atoms = find_n_nearest_atoms(sites_clash_P[i], atoms, n)
-        internal_coords = get_internal_coords(n_nearest_atoms[:, -4:-1] - sites_clash_P[i])
-        one_training_X = np.append(n_nearest_atoms[:, 0:4], internal_coords, axis=1)
-        training_X.append(one_training_X.flatten())
-
-    print(f'Number of generated sites with NO water: {len(training_X)}')
-    return np.array(training_X), np.array(waters_low_E)
-
-
-def generate_training_yes_X(waters, atoms, n):
-    """
-    Generate X training data for yes cases for neural network
-    ----------------------------------------------------------------------------
-    waters: ndarray W x 7
-    Array of water information
-
-    atoms: ndarray N x 7
-    Array of other atoms' information
-
-    n: int
-    Number of closest atoms
-    ----------------------------------------------------------------------------
-    Returns:
-    training_X: W x n x 7
-    training X data
-    """
-    W = waters.shape[0]
-    training_X = np.zeros([W, 7 * n])
-    for i in range(W):
-        n_nearest_atoms = find_n_nearest_atoms(waters[i], atoms, n)
-        internal_coords = get_internal_coords(
-                n_nearest_atoms[:, -4:-1] - waters[i, -3:])
-        one_training_X = np.append(n_nearest_atoms[:, 0:4],
-                                   internal_coords, axis=1)
-        training_X[i] = one_training_X.flatten()
-
-    return training_X
-
 
 
 def feature_encoder_atom(feature_number):
@@ -1352,7 +1250,7 @@ def read_pdb(input_pdb):
         one_data = np.append(one_data, atom_encode)
         one_data = np.append(one_data, residue_encode)
         one_data = np.append(one_data, xyz)
-        if res_type == 'HOH':
+        if res_type == 'HOH' or res_type == 'WAT' or res_type == 'SOL':
             water_data.append(one_data)
         else:
             protein_data.append(one_data)
@@ -1381,192 +1279,31 @@ def read_cavities(cavities_pdb):
 
     return np.array(cavities_data)
 
-def combine_training_data(X_yes, X_no, y_yes, y_no):
-    num_no_cases = y_no.shape[0]
-    num_yes_cases = y_yes.shape[0]
-    training_X = np.append(X_no, X_yes, axis=0)
-    training_y = np.append(y_no, y_yes, axis=0)
-    ratio = int(num_no_cases / num_yes_cases)
-    yes_i = num_no_cases
-    for i in range(num_yes_cases):
-        training_X[[i + ratio, yes_i + i]] = \
-            training_X[[yes_i + i, i + ratio]]
-        training_y[[i + ratio, yes_i + i]] = training_y[[yes_i + i, i + ratio]]
-
-    return training_X, training_y
 
 def randomize_training_data(training_X, training_y):
     assert training_X.shape[0] == training_y.shape[0]
     p = np.random.permutation(training_X.shape[0])
     return training_X[p], training_y[p]
 
-def print_arr_nByRow(arr, nByRow = 7, nprec=4):
-    arr = np.array(arr)
-    for i in range(0, len(arr), nByRow):
-        formatted_str = "%.*f" %  (nprec, arr.item(i))
-        for x in arr[i + 1:i + nByRow]:
-           formatted_str = "%s %.*f" % (formatted_str, nprec,x)
-        print(formatted_str)
-
-def check_conserved_components(arr2d,arrname='arr2d'):
-    # Reduce along columns (axis=0)
-    min_val = np.min(arr2d, axis=0)
-    max_val = np.max(arr2d, axis=0)
-    delta = max_val - min_val
-    if np.any(delta == 0.0):
-        print(f'There are conserved coordinates in the array "{arrname}".')
-        print(f'delta = max_val - min_val:')
-        print_arr_nByRow(delta, 7, 8)
-        zero_indices = np.where(delta == 0)[0]
-        print(f'Indecies of conserved coordinates in the array "{arrname}":{zero_indices}')
-
-
-import argparse
-parser = argparse.ArgumentParser(
-        prog='pdb2descriptors.py',
-        description='script that generates YES- and NO-water descriptors for input_pdb',
-        )
-parser.add_argument('-p', '--input_pdb', type=str)
-parser.add_argument('-c', '--input_cavities', type=str)
 
 if __name__ == '__main__':
-    # Generate training and validation data
     try:
-        args = parser.parse_args()
-        input_pdb = args.input_pdb
-        input_cavities = args.input_cavities
+        input_pdb1 = sys.argv[1]
+        input_pdb2 = sys.argv[2]
     except IndexError:
-        print("Usage: python pdb2descriptors.py -p input_pdb -c input_cavities")
+        print("Usage: python compare_water.py input_pdb1 input_pdb2")
         exit()
-    pdb_name = os.path.basename(input_pdb).split('.')[0]
-    water_data, protein_data = read_pdb(input_pdb)
-    cavities_data = read_cavities(input_cavities)
+    pdb1_name = os.path.basename(input_pdb1).split('.')[0]
+    pdb2_name = os.path.basename(input_pdb2).split('.')[0]
+    water_data1, protein_data1 = read_pdb(input_pdb1)
+    water_data2, protein_data2 = read_pdb(input_pdb2)
     # print(atom_types)
-    total_data = np.append(water_data, protein_data, axis=0)
-    print("Generating training data...")
+    #total_data = np.append(water_data1, protein_data1, axis=0)
+    print(f"Computing distances between water in {pdb1_name} and {pdb2_name}...")
     starting_time = timeit.default_timer()
 
-    ##
-    ## Generate Z Descriptors (default)
-    ##
+    check_water_positions('Water',water_data1, protein_data1, 2.3, pdb_idx_shift = 0)
+    check_water_positions('Water',water_data2, protein_data2, 2.3, pdb_idx_shift = 0)
+    check_water_shift('Water', water_data1[:,-3:], water_data2[:,-3:])
 
-
-    training_no_X_clash, water_OK = generate_no_X_clash("water", water_data,
-                                                        protein_data, 2.3)
-    site_near_protein = add_rand_vector(protein_data, 0.5)
-    training_no_X_prot = generate_training_no_X(total_data, site_near_protein,
-                                                n=10, interval=10)
-
-    training_yes_X = generate_training_yes_X(water_OK, total_data, n=10)
-    num_of_cav = cavities_data.shape[0]
-    print("number of no cases before balancing: %d" % num_of_cav)
-    interval_of_no_cases = 1  # int(num_of_cav / water_data.shape[0])
-    #interval_of_no_cases = int(num_of_cav / training_yes_X.shape[0])
-    training_no_X = generate_training_no_X(total_data, cavities_data, n=10,
-                                           interval=interval_of_no_cases)
-    print("number of yes cases: %d" % training_yes_X.shape[0])
-    print("number of no cases: %d" % training_no_X.shape[0])
-
-    #training_yes_X = generate_Z_descriptors(water_data, total_data, n=10)
-    #noW_cav_sites = noW_nearestN_cavity_grid(input_cavities, total_data, n=10)
-    #training_no_X = generate_Z_descriptors(noW_cav_sites, total_data, n=10)
-
-    num_of_cav = cavities_data.shape[0]
-    print("number of no cases before balancing: %d" % num_of_cav)
-    #interval_of_no_cases = int(num_of_cav / water_OK.shape[0])
-    interval_of_no_cases = int(num_of_cav / water_data.shape[0])
-    #interval_of_no_cases = int(num_of_cav / training_yes_X.shape[0])
-    no_water_cav = search_no_water_sites(total_data, cavities_data, n=10, interval=interval_of_no_cases / 2)
-    #training_no_X = generate_training_no_X(total_data, cavities_data, n=10,interval=interval_of_no_cases / 2)
-
-    ##
-    ## Generate Z Descriptors (default)
-    ##
-    training_yes_X      = generate_Z_descriptors(water_OK,           total_data, n=10)
-    training_no_X       = generate_Z_descriptors(no_water_cav,       total_data, n=10)
-    training_no_X_clash = generate_Z_descriptors(water_clash,        total_data, n=10)
-    training_no_X_prot  = generate_Z_descriptors(sites_near_protein, total_data, n=10)
-
-    print("number of yes cases: %d" % training_yes_X.shape[0])
-    print("number of no cases: %d" % training_no_X.shape[0]) 
-
-    ##   ##
-    ##   ## Generate AEV Descriptors
-    ##   ##
-    ##   check_closest_env_distances('Water', water_data, total_data, len(protein_data))
-    ##   noW_cav_sites = noW_nearestN_cavity_grid(input_cavities, total_data, n=10)
-    ##   #noW_cav_sites = noW_cavity_grid(input_cavities, protein_data, water_data)
-    ##   check_closest_env_distances('CavGrid', noW_cav_sites, total_data, 0)
-    ##   # Generate AEV Descriptors
-    ##   training_yes_X = generate_AEV_descriptors(water_data, total_data)
-    ##   checkZERO_AEV_descriptors('PDB Water', training_yes_X, len(protein_data))
-    ##   training_no_X = generate_AEV_descriptors(noW_cav_sites, total_data)
-    ##   checkZERO_AEV_descriptors('noW Cavity Grid', training_no_X)
-
-    training_yes_y = generate_training_yes_y(water_OK.shape[0])
-    training_no_y = generate_training_no_y(training_no_X.shape[0])
-    #exit()
-
-
-    training_yes_y = generate_training_yes_y(training_yes_X.shape[0])
-    training_no_y  = generate_training_no_y(training_no_X.shape[0])
-    # training_X, training_y = combine_training_data(training_yes_X,
-    #                                                training_no_X,
-    #                                                training_yes_y,
-    #                                                training_no_y)
-    training_X = np.append(training_yes_X, training_no_X, axis=0)
-    training_y = np.append(training_yes_y, training_no_y, axis=0)
-
-    # Add clashed water to NO cases
-    training_no_y_clash = generate_training_no_y(training_no_X_clash.shape[0])
-    training_X = np.append(training_X, training_no_X_clash, axis=0)
-    training_y = np.append(training_y, training_no_y_clash, axis=0)
-    # Add protein atom positions as water NO cases
-
-    print('Generate proten NO cases y values')
-    training_no_y_prot = generate_training_no_y(training_no_X_prot.shape[0])
-    print('Finished proten NO cases y values')
-    training_X = np.append(training_X, training_no_X_prot, axis=0)
-    training_y = np.append(training_y, training_no_y_prot, axis=0)
-    # training_X, training_y = combine_training_data(training_X,
-    #                                                training_no_X_clash,
-    #                                                training_y,
-    #                                                training_no_y_clash)
-
-    ##
-    ##  Check conserved components of descriptors
-    ##
-    # check_conserved_components(training_yes_X,arrname='training_yes_X')
-    # check_conserved_components(training_no_X,arrname='training_no_X')
-    # check_conserved_components(training_no_X_clash,arrname='training_no_X_clash')
-    # check_conserved_components(training_no_X_prot,arrname='training_no_X_prot')
-
-    ending_time = timeit.default_timer()
-    total_time = ending_time - starting_time
-    print(f"Data processing took {total_time:.2f} seconds")
-    #training_X, training_y = randomize_training_data(training_X, training_y)
-    np.save(f'train_data/{pdb_name}_CI_X_yes.npy', training_yes_X)
-    np.save(f'train_data/{pdb_name}_CI_y_yes.npy', training_yes_y)
-    np.save(f'train_data/{pdb_name}_CI_X.npy', training_X)
-    np.save(f'train_data/{pdb_name}_CI_y.npy', training_y)
-    # My extra output for testing
-    np.save(f'train_data/{pdb_name}_CI_X_no.npy', training_no_X)
-    np.save(f'train_data/{pdb_name}_CI_y_no.npy', training_no_y)
-    np.save(f'train_data/{pdb_name}_CI_X_no_clash.npy', training_no_X_clash)
-    np.save(f'train_data/{pdb_name}_CI_y_no_clash.npy', training_no_y_clash)
-    np.save(f'train_data/{pdb_name}_CI_X_no_prot.npy', training_no_X_prot)
-    np.save(f'train_data/{pdb_name}_CI_y_no_prot.npy', training_no_y_prot)
-
-    max_yes = np.max(training_yes_X)
-    min_yes = np.min(training_yes_X)
-    max_no = np.max(training_no_X)
-    min_no = np.min(training_no_X)
-    print(f'max and min of yes descriptors: {max_yes:.3f}, {min_yes:.3f}')
-    print(f'max and min of no descriptors: {max_no:.3f}, {min_no:.3f}')
-    print(f'Last 5 descriptors: {training_no_X[-5:]}')
-    print(f'Number of generated water sites: {len(training_yes_X)}')
-    print(f'Number of generated NO water sites: {len(training_no_X)}')
-    print(f'Number of generated clash NO water sites: {len(training_no_X_clash)}')
-    print(f'Number of generated protein atom NO water sites: {len(training_no_X_prot)}')
-    print(f'Total Number of generated data points: {len(training_X)}')
     pass
