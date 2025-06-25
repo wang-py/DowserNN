@@ -1546,6 +1546,7 @@ def read_cavities(cavities_pdb):
 
     return np.array(cavities_data)
 
+
 def combine_training_data(X_yes, X_no, y_yes, y_no):
     num_no_cases = y_no.shape[0]
     num_yes_cases = y_yes.shape[0]
@@ -1560,10 +1561,12 @@ def combine_training_data(X_yes, X_no, y_yes, y_no):
 
     return training_X, training_y
 
+
 def randomize_training_data(training_X, training_y):
     assert training_X.shape[0] == training_y.shape[0]
     p = np.random.permutation(training_X.shape[0])
     return training_X[p], training_y[p]
+
 
 def print_arr_nByRow(arr, nByRow = 7, nprec=4):
     arr = np.array(arr)
@@ -1573,19 +1576,21 @@ def print_arr_nByRow(arr, nByRow = 7, nprec=4):
            formatted_str = "%s %.*f" % (formatted_str, nprec,x)
         print(formatted_str)
 
+
 def check_conserved_components(arr2d,arrname='arr2d'):
-    # Reduce along columns (axis=0)
-    min_val = np.min(arr2d, axis=0)
-    max_val = np.max(arr2d, axis=0)
-    delta = max_val - min_val
-    print(f'"{arrname}", delta = max_val - min_val:')
-    print_arr_nByRow(delta, 7, 8)
-    if np.any(delta == 0.0):
-        print(f'There are conserved coordinates in the array "{arrname}".')
-        print(f'delta = max_val - min_val:')
+    if arr2d.any():
+        # Reduce along columns (axis=0)
+        min_val = np.min(arr2d, axis=0)
+        max_val = np.max(arr2d, axis=0)
+        delta = max_val - min_val
+        print(f'"{arrname}", delta = max_val - min_val:')
         print_arr_nByRow(delta, 7, 8)
-        zero_indices = np.where(delta == 0)[0]
-        print(f'Indecies of conserved coordinates in the array "{arrname}":{zero_indices}')
+        if np.any(delta == 0.0):
+            print(f'There are conserved coordinates in the array "{arrname}".')
+            print(f'delta = max_val - min_val:')
+            print_arr_nByRow(delta, 7, 8)
+            zero_indices = np.where(delta == 0)[0]
+            print(f'Indecies of conserved coordinates in the array "{arrname}":{zero_indices}')
 
 import argparse
 parser = argparse.ArgumentParser(
