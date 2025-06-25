@@ -3,6 +3,7 @@ from keras import utils
 from keras import saving
 import tensorflow as tf
 import matplotlib.pyplot as plt
+from matplotlib.ticker import MaxNLocator
 import argparse
 
 parser = argparse.ArgumentParser(
@@ -29,8 +30,9 @@ def plot_model_accuracy(accuracy_values, figtitle=None, sorted_val=True):
     num_of_water = accuracy_values.shape[0]
     percent_above_threshold = num_above_threshold / num_of_water
     fig, ax = plt.subplots(figsize=(8, 6))
+    ax.xaxis.set_major_locator(MaxNLocator(integer=True))
     ax.set_title(figtitle)
-    ax.bar(np.arange(num_of_water), accuracy_values)
+    ax.bar(np.arange(num_of_water) + 1, accuracy_values)
     ax.axhline(accuracy_threshold, color='k', linestyle='--',
                label=f'accuracy threshold = {accuracy_threshold}\n' +
                f'% water above threshold: {percent_above_threshold:.0%}')
@@ -165,7 +167,7 @@ if __name__ == "__main__":
 
     # plot confidence for water molecules
     # get_low_accuracy_waters(accuracy_values_yes)
-    plot_model_accuracy(accuracy_values_yes, figtitle='tested with yes cases')
+    plot_model_accuracy(accuracy_values_yes, figtitle='tested with yes cases', sorted_val=False)
     plt.show()
 
     # 2) Test no-cases
