@@ -381,7 +381,7 @@ if __name__ == "__main__":
     # NN model and training psarameters
     num_of_layers = 1
     hidden_dim = 8
-    epochs = 200
+    epochs = 1000
 
     # Load training and validation data
     args = parser.parse_args()
@@ -425,7 +425,8 @@ if __name__ == "__main__":
     if nYes == 0 or nNo == 0:
         print(f'ERROR: number of Yes- or No-cases cannot be ZERO, nYes = {nYes}, nNo = {nNo}.')
         exit()
-    weight_yes_multiplier = represent_yes_data * float(nNo) / float(nYes)
+    # 0.65 to offset the bias towards yes
+    weight_yes_multiplier = represent_yes_data * float(nNo) / float(nYes) * 0.65
     w_data = np.where(y[:, 0] == 1, weight_yes_multiplier, 1.0) # apply weight_yes_multiplier for Yes-cases(y[:, 0] == 1), otherwise weight = 1.0.
     # w_data = np.ones(N, dtype=float)
     # w_data[:nYes] = w_data[:nYes] * weight_yes_multiplier
@@ -478,7 +479,7 @@ if __name__ == "__main__":
         print("No exising model found, creating a new model")
         print(f"TrainData_dim={len(y_train)}, layers={num_of_layers}, hidden_dim={hidden_dim}")
         model = build_NN(num_of_layers, N, input_dim, hidden_dim,
-                         learning_rate=0.001)
+                         learning_rate=0.0005)
     # Train the model
     if X_test is not None:
         history = model.fit(X_train, y_train, sample_weight = w_train, epochs=epochs, batch_size=32,
