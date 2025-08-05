@@ -380,8 +380,8 @@ def save_model(model, output_filename: str):
 if __name__ == "__main__":
     # NN model and training psarameters
     num_of_layers = 1
-    hidden_dim = 8
-    epochs = 200
+    hidden_dim = 4
+    epochs = 10000
 
     # Load training and validation data
     args = parser.parse_args()
