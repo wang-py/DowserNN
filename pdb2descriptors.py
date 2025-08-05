@@ -1323,15 +1323,15 @@ def check_water_enviroment(waters, protein, cutoff_clash, Nmax = 1, pdb_idx_shif
     #  
     #  print(f'Num sites ({len(sites_protein_wat)}) sites_protein_wat[0:5]:\n{sites_protein_wat[0:5]}')
     #  exit()
-
+    maxprint = 50
     if len(water_clash) > 0:
         nprint = len(water_clash)
         print('-------------')
         print(f'Found {nprint} water sites with P-Env clash within cutoff_clash = {cutoff_clash}')
         print(f'Will use these {nprint} water sites as NO cases')
         print(f'Number of remained water Yes cases after excluding {nprint} clashed sites is {len(water_ok)}.')
-        if nprint > 30: nprint = 30
-        print(f'Indecies of first 30 sites with P-Env clash within cutoff_clash = {cutoff_clash}:', idx_clash_P[:nprint])
+        if nprint > maxprint: nprint = maxprint
+        print(f'Indecies of first {nprint} sites with P-Env clash within cutoff_clash = {cutoff_clash}:', idx_clash_P[:nprint])
 
     print(f'Computed distnaces for {len(dist_P)} water molecules and closest Protein atom within cutoff')
     print(f'{dist_P[0:5]}')
@@ -1490,6 +1490,7 @@ def read_pdb(input_pdb):
     atom_info = [line for line in pdb_file.readlines()
                  if line.startswith('ATOM  ') or line.startswith('HETATM')]
     water_data = []
+    env_water_data = []
     protein_data = []
     num_of_atom_types = len(atom_types.keys())
     num_of_residue_types = len(residue_types.keys())
@@ -1512,6 +1513,11 @@ def read_pdb(input_pdb):
             num_of_residue_types += 1
             residue_types[res_type] = num_of_residue_types
             residue_encode = feature_encoder_residue(residue_types[res_type])
+            if res_type == 'ENW':  # ENW is (EN)VIRONMENT (W)ATER which is used for computing descriptors but not for YES-cases
+                residue_encode = feature_encoder_residue(residue_types['HOH'])
+                del residue_types['ENW']
+                num_of_residue_types -= 1
+
             # print("residue_types:", residue_types)
 
         one_data = np.append(one_data, atom_encode)
@@ -1519,10 +1525,12 @@ def read_pdb(input_pdb):
         one_data = np.append(one_data, xyz)
         if res_type == 'HOH':
             water_data.append(one_data)
+        elif res_type == 'ENW':
+            env_water_data.append(one_data)
         else:
             protein_data.append(one_data)
 
-    return np.array(water_data), np.array(protein_data)
+    return np.array(water_data), np.array(env_water_data), np.array(protein_data)
 
 
 def read_cavities(cavities_pdb):
@@ -1607,13 +1615,16 @@ if __name__ == '__main__':
         exit()
 
     pdb_name = os.path.basename(input_pdb).split('.')[0]
-    water_data, protein_data = read_pdb(input_pdb)
+    water_data, env_water_data, protein_data = read_pdb(input_pdb)
     cavities_data = read_cavities(input_cavities)
     #if hasattr(args, 'descriptor_type') and args.descriptor_type: descriptor = args.descriptor_type
     descriptor = args.descriptor_type
     print(f'Using descriptor type  = \"{descriptor}\"')
     # print(atom_types)
     total_data = np.append(water_data, protein_data, axis=0)
+    if len(env_water_data) > 0:
+        total_data = np.concatenate( (water_data, env_water_data,  protein_data), axis=0)
+    print(f'PDB includes {len(water_data)} water, {len(env_water_data)} env-water and {len(protein_data)} protein atoms')
     print("Generating training data...")
     starting_time = timeit.default_timer()
 
