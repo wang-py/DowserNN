@@ -178,7 +178,8 @@ if __name__ == "__main__":
     X_validate_no = tf.convert_to_tensor(X_no)
     y_validate_no = tf.convert_to_tensor(y_no)
     # flip the accuracy to reflect water prediction result
-    accuracy_values_no = 1 - get_model_accuracy(model,
-                                                X_validate_no, y_validate_no)
+    accuracy_values_no = get_model_accuracy(model, X_validate_no, y_validate_no)
+    #accuracy_values_no = 1 - get_model_accuracy(model,
+    #                                            X_validate_no, y_validate_no)
     plot_model_accuracy(accuracy_values_no, figtitle='tested with no cases')
     plt.show()

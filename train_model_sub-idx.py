@@ -21,6 +21,7 @@ parser.add_argument('-t', '--train_pdb', type=str)
 parser.add_argument('-p', '--test_percentage', type=float, default=0.2)
 parser.add_argument('-v', '--validate_pdb', type=str)
 parser.add_argument('-o', '--output_filename', type=str)
+parser.add_argument('-i', '--sub_water_file', type=str)
 parser.add_argument('-b', '--balance_y_no', type=float, default=1.0)
 
 # make sure results are reproducible
@@ -61,7 +62,7 @@ def generate_train_test_set(X_data, y_data, percent: float):
 
     return train_X, train_y, test_X, test_y
 
-def split_randomize_train_test_set(X_data, y_data, w_data, percent: float):
+def split_randomize_train_test_set(X_data, y_data, w_data, test_index, percent: float):
     """
     generates training and testing sets from all input data, the percentage of
     test data can be specified by "percent"
@@ -87,8 +88,8 @@ def split_randomize_train_test_set(X_data, y_data, w_data, percent: float):
     """
     index_range = X_data.shape[0]
     indices = range(index_range)
-    num_of_test_pts = int(index_range * percent)
-    test_index = random.sample(indices, num_of_test_pts)
+    #num_of_test_pts = int(index_range * percent)
+    #test_index = random.sample(indices, num_of_test_pts)
     train_index = list(set(indices) - set(test_index))
     
     ## test_index = np.array(random.sample(indices, num_of_test_pts))
@@ -381,7 +382,7 @@ if __name__ == "__main__":
     # NN model and training psarameters
     num_of_layers = 1
     hidden_dim = 4
-    epochs = 1000
+    epochs = 10000
 
     # Load training and validation data
     args = parser.parse_args()
@@ -393,6 +394,9 @@ if __name__ == "__main__":
     y_file = training_pdb + "_CI_y.npy"
     X = np.load(X_file)
     y = np.load(y_file)
+
+    sub_indices_Yes = np.loadtxt(args.sub_water_file, dtype=int)
+    print(f'sub_indices_Yes[0:20]:{sub_indices_Yes[0:20]}')
     #print(f"loaded y[0:10]:\n{y[0:10]}")
     #print(f'Last 2 descriptors: {X[-2:]}')
 
@@ -415,18 +419,26 @@ if __name__ == "__main__":
     print(f'Loaded {N} descriptors of dimension {X_data.shape[1]}.')
 
     # Generate weights to balance under represented water data set during NN fitting
-     #nYes = len(X_validate)
+    #nYes = len(X_validate)
     nYes = np.sum(y[:,0] == 1)
     nNo  = np.sum(y[:,1] == 1)
+    nWsub = len (sub_indices_Yes)
     if nNo + nYes != N:
         print(f'ERROR: inconsistent y_data, number of Yes- and No-cases ({nYes}+{nNo}) is not equal to the total N = {N}.')
         exit()
     if nYes == 0 or nNo == 0:
         print(f'ERROR: number of Yes- or No-cases cannot be ZERO, nYes = {nYes}, nNo = {nNo}.')
         exit()
-   
+    # Use advanced indexing to select elements
+    y_sub_water = y[sub_indices_Yes,0]
+    nWsub = int( np.sum(y_sub_water) )
+    if nWsub != len (sub_indices_Yes):
+        print(f'ERROR: checksum of sub water Yes-cases ({nWsub}) is smaller than number of defined subunit water ({len (sub_indices_Yes)}).')
+        exit()
+    print(f'The number of loaded subunit water and total number of Yes-cases is ({nWsub}) and ({nYes}), respectively.')
+
    # balance_y_no cases representation of water data in the loss function compare to No-cases, 1 means the same, 0.5/2 means twice under-/over-represented.
-    weight_yes_multiplier = args.balance_y_no * float(nNo) / float(nYes)
+    weight_yes_multiplier = args.balance_y_no * (1.0-testing_percentage) * float(nNo) / float(nYes - nWsub)
     w_data = np.where(y[:, 0] == 1, weight_yes_multiplier, 1.0) # apply weight_yes_multiplier for Yes-cases(y[:, 0] == 1), otherwise weight = 1.0.
     # w_data = np.ones(N, dtype=float)
     # w_data[:nYes] = w_data[:nYes] * weight_yes_multiplier
@@ -445,17 +457,34 @@ if __name__ == "__main__":
     else:
         testing_pdb = training_pdb
         if testing_percentage != 0:
+            nNo_test_pts = int(nNo * testing_percentage)
+            indices_No = range(nYes, N)   # Assume No-cases follow after Yes-cases in the data arrays
+            test_indices_No = random.sample(indices_No, nNo_test_pts)
+            test_indices = np.concatenate((sub_indices_Yes, np.array(test_indices_No)))   # sub-water is the test set for Yes-cases
+            # Check if dublicates
+            unique_elements, counts = np.unique(test_indices, return_counts=True)
+            duplicate_values = unique_elements[counts > 1]
+            if duplicate_values.size > 0 :
+                print(f'ERROR: test_indices array has dublicates: {duplicate_values}')
+                exit()
+            print(f'nWsub = {nWsub} sub_indices_Yes[{nWsub-5}:]: {sub_indices_Yes[nWsub-5:]}')
+            print(f'nNo={nNo} indices_No[0:5]:{indices_No[0:5]}')
+            print(f'nNo_test_pts={nNo_test_pts} test_indices_No[0:10]:{test_indices_No[0:10]}')
+            print(f'n_test_pts={len(test_indices)} test_indices[{nWsub-5}:{nWsub+5}]: {test_indices[nWsub-5:nWsub+5]}')
+
             X_train, y_train, w_train, X_test, y_test, w_test =\
                 split_randomize_train_test_set(X_data, y_data, w_data,
-                                               percent=testing_percentage)
+                                               test_indices, percent=testing_percentage)
             # X_train, y_train, X_test, y_test =\
             #     generate_train_test_set(X_data, y_data,
             #                             percent=testing_percentage)
         else:
-            X_train = X_data
-            y_train = y_data
-            X_test = None
-            y_test = None
+            indices = range(N)
+            train_indices = list(set(indices) - set(sub_indices_Yes))
+            X_train = tf.gather(X_data, indices=train_indices)
+            y_train = tf.gather(y_data, indices=train_indices)
+            X_test = tf.gather(X_data, indices=sub_indices_Yes)
+            y_test = tf.gather(y_data, indices=sub_indices_Yes)
 
     #nYes_train = int (nYes * (1.0-testing_percentage))
     #nYes_test = int (nYes * testing_percentage)
@@ -501,6 +530,17 @@ if __name__ == "__main__":
     # 1) plot test set accuracy
     test_accuracies = get_model_accuracy(model, X_test, y_test)
     plot_model_accuracy(np.sort(test_accuracies), 'reproducing test set')
+    
+    # 1a) plot sub water accuracy
+    X_sub = tf.gather(X_data, indices=sub_indices_Yes)
+    y_sub = tf.gather(y_data, indices=sub_indices_Yes)
+    test_accuracies = get_model_accuracy(model, X_sub, y_sub)
+    plot_model_accuracy(np.sort(test_accuracies), 'reproducing sub-water Yes-cases')
+
+    X_test_no = tf.gather(X_data, indices=test_indices_No)
+    y_test_no = tf.gather(y_data, indices=test_indices_No)
+    test_accuracies = get_model_accuracy(model, X_test_no, y_test_no)
+    plot_model_accuracy(np.sort(test_accuracies), 'reproducing test set No-cases')
 
     # 2) plot training set accuracy
     training_accuracies = get_model_accuracy(model, X_train, y_train)
