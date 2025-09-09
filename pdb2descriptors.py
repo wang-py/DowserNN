@@ -1228,9 +1228,16 @@ def atom_add_vector(atom_P, water,length):
     #print(f'pos_near_atoms:{pos_near_atoms[:2]}')
     return pos_atom_vec
 
+import matplotlib.pyplot as plt
+fig_count = 0        # Initializing figure count
+def plt_savefig():
+    global pdb_name, fig_count
+    fig_count += 1
+    plt.savefig(f'train_data/{pdb_name}_pdb{str(fig_count)}.png', dpi = 200)
+
 def draw_distance_histogram(values, nbins, Title, low_val_mark=2.3, high_val_mark = 3.5):
+    plt.clf()   # Clear the figure, now new plot will appear on a blank figure
     # Plotting a basic histogram
-    import matplotlib.pyplot as plt
     n, bins, patches = plt.hist(values, bins=nbins, color='skyblue', edgecolor='black')
     # Color the bars based on a condition
     for i, patch in enumerate(patches):
@@ -1242,6 +1249,7 @@ def draw_distance_histogram(values, nbins, Title, low_val_mark=2.3, high_val_mar
     plt.xlabel('Distance, (\u212B)', fontweight='bold')
     plt.ylabel('Frequency', fontweight='bold')
     plt.title(Title, fontweight='bold')
+    plt_savefig()   # Save figure with the figure count prefix "_nn{fig_count}"
     # Display the plot
     plt.show() 
 

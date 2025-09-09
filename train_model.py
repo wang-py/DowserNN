@@ -1,6 +1,7 @@
 import numpy as np
 import random
 import os
+print('-' * 80)
 from keras.models import Sequential
 from keras.layers import Dense
 from keras.optimizers import Adam
@@ -9,6 +10,28 @@ from keras import saving
 from training_visualization import weights_visualization_callback
 from training_visualization import weights_history_visualizer
 import tensorflow as tf
+
+import timeit
+# MONITOR devices used by Tensorflow
+tf.config.set_visible_devices([], 'GPU')   # Set the device to CPU by hiding all GPU devices
+import logging
+try:
+    # Set Python logging to INFO temporarily
+    tf.get_logger().setLevel(logging.INFO)
+    print('-' * 70)
+    print("Available TensorFlow physical devices:")
+    devices = tf.config.list_physical_devices()
+    if not devices:
+        print("No physical devices found. Check your TensorFlow installation.")
+    else:
+        for device in devices:
+            print(f"- {device}")
+finally:
+    # Reset Python logging level to WARNING after printing
+    tf.get_logger().setLevel(logging.WARNING)
+    print("\nTensorFlow INFO logs have been suppressed for the rest of the script.")
+    print('-' * 70)
+
 import matplotlib.pyplot as plt
 import argparse
 
@@ -27,6 +50,11 @@ parser.add_argument('-b', '--balance_y_no', type=float, default=1.0)
 seed_val = 1029
 utils.set_random_seed(seed_val)
 
+fig_count = 0        # Initializing figure count
+def plt_savefig():
+    global training_pdb, fig_count
+    fig_count += 1
+    plt.savefig(f'{training_pdb}_nn{str(fig_count)}.png', dpi = 200)
 
 def generate_train_test_set(X_data, y_data, percent: float):
     """
@@ -133,6 +161,7 @@ def plot_model_accuracy(accuracy_values, plot_title: str = 'model accuracy'):
     ax.set_ylabel("confidence")
     ax.set_title(plot_title)
     ax.legend()
+    plt_savefig()   # Save figure with the figure count prefix "_nn{fig_count}"
     plt.show()
     pass
 
@@ -161,6 +190,7 @@ def plot_dataset_prediction(model, X_data, y_data, plot_title: str = 'model accu
     ax.set_xlabel("Index of data point", fontweight='bold')
     ax.set_ylabel("Confidence", fontweight='bold')
     ax.legend()
+    plt_savefig()   # Save figure with the figure count prefix "_nn{fig_count}"
     plt.show()
     pass
 
@@ -256,6 +286,7 @@ def plot_loss_history(history, train_pdb, val_pdb):
     #                label='test cross entropy')
     ax.set_title('training and validation loss')
     ax.legend()
+    plt_savefig()   # Save figure with the figure count prefix "_nn{fig_count}"
     plt.show()
 
 class MinMaxNormalization(tf.keras.layers.Layer):
@@ -381,7 +412,7 @@ if __name__ == "__main__":
     # NN model and training psarameters
     num_of_layers = 1
     hidden_dim = 4
-    epochs = 1000
+    epochs = 100
 
     # Load training and validation data
     args = parser.parse_args()
@@ -481,6 +512,7 @@ if __name__ == "__main__":
         model = build_NN(num_of_layers, N, input_dim, hidden_dim,
                          learning_rate=0.001)
     # Train the model
+    training_start_time = timeit.default_timer()
     if X_test is not None:
         history = model.fit(X_train, y_train, sample_weight = w_train, epochs=epochs, batch_size=32,
                             validation_data=(X_test, y_test, w_test),
@@ -488,6 +520,9 @@ if __name__ == "__main__":
     else:
         history = model.fit(X_train, y_train, sample_weight = w_train, epochs=epochs, batch_size=32,
                             callbacks=callback)
+    training_time = timeit.default_timer() - training_start_time
+    print(f"NN training took {training_time:.2f} seconds")
+    print('-' * 70)
     # save model
     if model_filename is None:
         model_filename = training_pdb + '.keras'
