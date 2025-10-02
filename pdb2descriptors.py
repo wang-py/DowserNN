@@ -949,7 +949,6 @@ def stride_sites(sites, closest_at_dist, Nref, ratio, site_title: str):
     for i in range(0, num, interval):
          sites_strided.append(sites[i])
          closest_at_dist_strided.append(closest_at_dist[i])
-    n0 = len(sites_strided)
     print(f'Balanced Number of no-water cavity sites {site_title}: {len(sites_strided)}, striding_interval = {interval}')
     return sites_strided, closest_at_dist_strided
 
@@ -1660,7 +1659,7 @@ if __name__ == '__main__':
     num_of_cav = cavities_data.shape[0]
     print("number of no cases before balancing: %d" % num_of_cav)
     #interval_of_no_cases = int(num_of_cav / water_OK.shape[0])
-    interval_of_no_cases = int(num_of_cav / water_data.shape[0])
+    #interval_of_no_cases = int(num_of_cav / water_data.shape[0])
     #interval_of_no_cases = int(num_of_cav / training_yes_X.shape[0])
     #no_water_cav = search_no_water_sites(total_data, cavities_data, n=10, interval=interval_of_no_cases / 2)
     no_water_cav = search_close_no_water_sites(total_data, cavities_data, n=10, Nref=len(water_OK),cutoff1=3.5,cutoff2=4.5,ratio1=0.1,ratio2=0.05) # Generate Nref number of No-water cavity sites
