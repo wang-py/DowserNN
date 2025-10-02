@@ -937,6 +937,10 @@ def stride_sites(sites, closest_at_dist, Nref, ratio, site_title: str):
     sites_strided: n x 3
     closest_at_dist_strided: n
     """
+    if Nref <= 0:
+        print(f'         Number of no-water cavity sites {site_title}: {len(sites)}. No striding for balancing was applied.')
+        return sites, closest_at_dist
+  
     num = len(sites)
     if len(closest_at_dist) != num:
         print(f'ERROR in stride_sites: sites array size ({num}) differs from the closest_at_dist size ({len(closest_at_dist)})')
@@ -965,8 +969,14 @@ def search_close_no_water_sites(atoms, cavities, n, Nref: int, cutoff1, cutoff2,
     n: int
     Number of closest atoms
 
-    interval: int
-    Interval between no cases
+    Nref: int
+    Reference number for striding sites within cuoff1. If Nref < 1 then all sites are used.
+
+    ratio1: in respect to Nref1 (number of strided sites within cutoff1)
+    Portion of the Nref1 for striding sites within cutoff2
+
+    ratio2: in respect to Nref1 (number of strided sites within cutoff1)
+    Portion of the Nref1 for striding sites out of cutoff2
     ----------------------------------------------------------------------------
     Returns:
     training_X: P x n x 7
@@ -1020,11 +1030,12 @@ def search_close_no_water_sites(atoms, cavities, n, Nref: int, cutoff1, cutoff2,
 
     no_water_site, closest_at_dist = stride_sites(no_water0, closest0_at_dist, Nref, 1.0, 'dist =< ' + str(cutoff1))
     draw_distance_histogram(closest_at_dist, 30, 'Distribution of Balanced cavity no-water sites Distances =< '  + str(cutoff1), 2.3, 3.5)
-
-    no_water_site1, closest1_at_dist = stride_sites(no_water1, closest1_at_dist, Nref, ratio1, 'dist =< ' + str(cutoff2))
+    
+    Nref1 = len(no_water_site)
+    no_water_site1, closest1_at_dist = stride_sites(no_water1, closest1_at_dist, Nref1, ratio1, 'dist =< ' + str(cutoff2))
     draw_distance_histogram(closest1_at_dist, 30, 'Distribution of Balanced cavity no-water sites Distances =< '  + str(cutoff2), 2.3, 3.5)
 
-    no_water_site2, closest2_at_dist = stride_sites(no_water2, closest2_at_dist, Nref, ratio2, 'dist > ' + str(cutoff2))
+    no_water_site2, closest2_at_dist = stride_sites(no_water2, closest2_at_dist, Nref1, ratio2, 'dist > ' + str(cutoff2))
     draw_distance_histogram(closest2_at_dist, 30, 'Distribution of Balanced cavity no-water sites Distances > '  + str(cutoff2), 2.3, 3.5)
 
     no_water_site   = no_water_site   + no_water_site1   + no_water_site2
@@ -1662,7 +1673,10 @@ if __name__ == '__main__':
     #interval_of_no_cases = int(num_of_cav / water_data.shape[0])
     #interval_of_no_cases = int(num_of_cav / training_yes_X.shape[0])
     #no_water_cav = search_no_water_sites(total_data, cavities_data, n=10, interval=interval_of_no_cases / 2)
-    no_water_cav = search_close_no_water_sites(total_data, cavities_data, n=10, Nref=len(water_OK),cutoff1=3.5,cutoff2=4.5,ratio1=0.1,ratio2=0.05) # Generate Nref number of No-water cavity sites
+
+    #no_water_cav = search_close_no_water_sites(total_data, cavities_data, n=10, Nref=len(water_OK),cutoff1=3.5,cutoff2=4.5,ratio1=0.1,ratio2=0.05) # Generate Nref number of No-water cavity sites
+    # Set Nref=0 because no balancing of No-cases is required. Data balancing is taken care by adjusting 1) water weights; 2) --balance_y_no
+    no_water_cav = search_close_no_water_sites(total_data, cavities_data, n=10, Nref=0,cutoff1=3.5,cutoff2=4.5,ratio1=0.5,ratio2=0.02) # Generate ALL No-water cavity sites, No striding within cutoff1
 
     #training_no_X = generate_training_no_X(total_data, cavities_data, n=10,interval=interval_of_no_cases / 2)
 
