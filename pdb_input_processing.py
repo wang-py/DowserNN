@@ -245,7 +245,7 @@ def check_num_of_protein_atoms(atoms_partitions, atoms):
     return False
 
 
-def generate_training_no_X(atoms, cavities, n: int = 10, interval: int = 4,
+def generate_training_no_X(atoms, cavities, n: int = 10, num_ref: int = 1000,
                            scaling_factor: float = 10):
     """
     Generate X training data for no cases for neural network
@@ -279,7 +279,8 @@ def generate_training_no_X(atoms, cavities, n: int = 10, interval: int = 4,
     C = cavities.shape[0]
     HOH_encoding = feature_encoder_residue(residue_types['HOH'])
     training_X = []
-    for i in range(0, C, int(interval)):
+    #for i in range(0, C, int(interval)):
+    for i in range(0, C):
         n_nearest_atoms = find_n_nearest_atoms(cavities[i], atoms, n)
         HOH_check = n_nearest_atoms[0:n, 2:4] - HOH_encoding
         if not np.any(HOH_check == 0.0):
@@ -290,7 +291,14 @@ def generate_training_no_X(atoms, cavities, n: int = 10, interval: int = 4,
                                        axis=1)
             training_X.append(one_training_X.flatten())
 
-    return np.array(training_X)
+    interval = round( float(len(training_X)) / float(num_ref) )   # striding interval
+    interval = interval if interval >=1 else 1
+    training_X_strided = []
+    for i in range(0, len(training_X), interval):
+         training_X_strided.append(training_X[i])
+    print(f'Balanced Number of no-water cavity sites: {len(training_X_strided)}, striding_interval = {interval}')
+
+    return np.array(training_X_strided)
     # for i in range(num_of_partitions):
     #     partition = atoms_partitions[i]
     #     num_atoms_in_box = partition.shape[0]
@@ -385,6 +393,7 @@ def format_atom_info_for_training(atom_info):
     water_data, protein_data: ndarray: N x 7
     """
     water_data = []
+    env_water_data = []
     protein_data = []
     num_of_atom_types = len(atom_types.keys())
     num_of_residue_types = len(residue_types.keys())
@@ -408,16 +417,22 @@ def format_atom_info_for_training(atom_info):
             residue_types[res_type] = num_of_residue_types
             residue_encode = feature_encoder_residue(residue_types[res_type])
             # print("residue_types:", residue_types)
+            if res_type == 'ENW':  # ENW is (EN)VIRONMENT (W)ATER which is used for computing descriptors but not for YES-cases
+                residue_encode = feature_encoder_residue(residue_types['HOH'])
+                del residue_types['ENW']
+                num_of_residue_types -= 1
 
         one_data = np.append(one_data, atom_encode)
         one_data = np.append(one_data, residue_encode)
         one_data = np.append(one_data, xyz)
-        if res_type == 'HOH' or atom_type == 'OW':
+        if res_type == 'HOH':
             water_data.append(one_data)
+        elif res_type == 'ENW':
+            env_water_data.append(one_data)
         else:
             protein_data.append(one_data)
 
-    return np.array(water_data), np.array(protein_data)
+    return np.array(water_data), np.array(env_water_data), np.array(protein_data)
 
 
 def format_atom_info_for_analysis(atom_info):
@@ -438,6 +453,7 @@ def format_atom_info_for_analysis(atom_info):
         # read in the atom name
         atom_type = str(line[13:16]).strip()
         res_type = str(line[17:20]).strip()
+        if res_type == 'ENW': res_type = 'HOH'
         # original data for analysis purpose
         one_data_original = np.append(one_data_original, atom_types[atom_type])
         one_data_original = np.append(one_data_original,
@@ -521,25 +537,28 @@ if __name__ == '__main__':
         exit()
     pdb_name = os.path.basename(input_pdb).split('.')[0]
     atom_info = read_pdb(input_pdb)
-    water_data, protein_data = format_atom_info_for_training(atom_info)
+    water_data, env_water_data, protein_data = format_atom_info_for_training(atom_info)
     water_data_original, protein_data_original = format_atom_info_for_analysis(atom_info)
     cavities_data = read_cavities(input_cavities)
     # print(atom_types)
     total_data = np.append(water_data, protein_data, axis=0)
+    if len(env_water_data) > 0:
+        total_data = np.concatenate( (water_data, env_water_data,  protein_data), axis=0)
+    print(f'PDB includes {len(water_data)} water, {len(env_water_data)} env-water and {len(protein_data)} protein atoms')
     total_data_original = np.append(water_data_original, protein_data_original,
                                     axis=0)
     print("Generating training data...")
-    scaling_factor = 100
-    print(f"Scaling factor for regularization is {scaling_factor}")
+    scaling_factor = 10                 # Normalization of IC descriptors  by factor 10 ( = r*r / (sqrt(10)^2)
+    print(f"Scaling factor for regularization is {scaling_factor}. Make sure it is equal to (normalization_coor)^2 in \"pdb2descriptors.py\"!")
     starting_time = timeit.default_timer()
     training_yes_X = generate_training_yes_X(water_data, total_data, n=10,
                                              scaling_factor=scaling_factor)
     training_yes_y = generate_training_yes_y(water_data.shape[0])
     num_of_cav = cavities_data.shape[0]
     print("number of no cases before balancing: %d" % num_of_cav)
-    interval_of_no_cases = int(num_of_cav / training_yes_X.shape[0])
+    #interval_of_no_cases = int(num_of_cav / training_yes_X.shape[0])
     training_no_X = generate_training_no_X(total_data, cavities_data, n=10,
-                                           interval=interval_of_no_cases / 2,
+                                           num_ref=training_yes_X.shape[0],
                                            scaling_factor=scaling_factor)
     print("number of yes cases: %d" % training_yes_X.shape[0])
     print("number of no cases: %d" % training_no_X.shape[0])
