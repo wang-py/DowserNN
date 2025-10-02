@@ -20,6 +20,11 @@ parser.add_argument('-k', '--sort_key', type=str)
 seed_val = 1029
 utils.set_random_seed(seed_val)
 
+fig_count = 0        # Initializing figure count
+def plt_savefig():
+    global args, fig_count
+    fig_count += 1
+    plt.savefig(f'{args.test_file}_test{str(fig_count)}.png', dpi = 200)
 
 def plot_model_accuracy(accuracy_values, figtitle=None, sorted_val=True):
     if sorted_val:
@@ -37,6 +42,8 @@ def plot_model_accuracy(accuracy_values, figtitle=None, sorted_val=True):
     ax.set_xlabel("index")
     ax.set_ylabel("confidence")
     ax.legend()
+    plt_savefig()   # Save figure with the figure count prefix "_nn{fig_count}"
+    plt.show()
     pass
 
 
@@ -44,20 +51,20 @@ def gaussian(energies, cutoff=-4):
     return np.exp(-(cutoff - energies) ** 2)
 
 
-def plot_water_data(acc_and_energies, sorted_by='accuracy'):
+def plot_water_data(acc_and_bfactors, sorted_by='accuracy'):
     fig, ax = plt.subplots(3, 1, figsize=(8, 6))
-    print(acc_and_energies)
+    print(acc_and_bfactors)
     if sorted_by == 'accuracy':
-        acc_and_energies = acc_and_energies[
-            acc_and_energies[:, 0].argsort()
+        acc_and_bfactors = acc_and_bfactors[
+            acc_and_bfactors[:, 0].argsort()
             ]
     elif sorted_by == 'energy':
-        acc_and_energies = acc_and_energies[
-            acc_and_energies[:, 1].argsort()
+        acc_and_bfactors = acc_and_bfactors[
+            acc_and_bfactors[:, 1].argsort()
             ]
 
-    accuracy_values = acc_and_energies[:, 0]
-    water_energies = acc_and_energies[:, 1]
+    accuracy_values = acc_and_bfactors[:, 0]
+    water_energies = acc_and_bfactors[:, 1]
     accuracy_threshold = 0.5
     num_above_threshold_acc = np.sum(accuracy_values > accuracy_threshold)
     num_of_water = accuracy_values.shape[0]
@@ -90,6 +97,7 @@ def plot_water_data(acc_and_energies, sorted_by='accuracy'):
     ax[2].set_ylabel("probability")
     ax[2].legend()
     plt.xlabel("water index")
+    plt_savefig()   # Save figure with the figure count prefix "_nn{fig_count}"
     plt.show()
     pass
 
@@ -122,8 +130,42 @@ def get_dowser_energies(water_pdb):
     with open(water_pdb, 'r') as water:
         data = water.readlines()
         dowser_energies = [float(x[60:67]) for x in data]
-
     return np.array(dowser_energies)
+
+def get_bfactors(pdb):
+    with open(pdb, 'r') as records:
+        atoms = records.readlines()
+        bfactors = [float(a[60:67]) for a in atoms]
+    return np.array(bfactors)
+
+def get_records_bfac(pdb):
+    with open(pdb, 'r') as atoms:
+        records = atoms.readlines()
+        bfactors = [float(rec[60:67]) for rec  in records]
+    return np.array(records),np.array(bfactors)
+
+def savepdb_new_bfac(pdb,values,val_suff):
+    # SAVE PDB with accuracies in place of B-factors rec[60:67]
+    import os
+    with open(pdb, 'r') as atoms:
+        records = atoms.readlines()
+    nrec = len(records)
+    if (nrec != len(values)):
+        print(f"Error in replace_bfac: the number of new b-factor values ({len(values)}) differs from number of records ({nrec}) in {pdb}\nExit")
+        exit()
+    abs_path = os.path.abspath(args.water_pdb)
+    path_wo_ext, _ = os.path.splitext(abs_path) # Split the path into root and extension
+    new_pdb = f'{path_wo_ext}_{val_suff}.pdb'
+    try:
+        f = open(new_pdb, 'w')
+    except OSError:
+        print(f"Error: cannot open file for writing {new_pdb}\nExit")
+        exit()
+
+    for i in range(nrec):
+        records[i] = "{}{:6.2f}{}".format(records[i][:60], values[i], records[i][67:])  # PDB format https://cupnet.net/pdb-format/
+    f.writelines(records)                    # Read lines with "\n" at the end
+    f.close()
 
 
 if __name__ == "__main__":
@@ -154,19 +196,22 @@ if __name__ == "__main__":
 
     accuracy_values_yes = get_model_accuracy(model,
                                              X_validate_yes, y_validate_yes)
-    if args.water_pdb:
-        dowser_energies = get_dowser_energies(args.water_pdb)
-        acc_and_energies = np.c_[accuracy_values_yes, dowser_energies]
-        plot_water_data(acc_and_energies, sorted_by=args.sort_key)
-
     # test with new data
     test_loss, accuracy = model.evaluate(X_validate_yes, y_validate_yes)
     print(f"test loss: {test_loss}")  # , test accuracy: {accuracy:.2%}")
 
+    if args.water_pdb:
+        bfactors = get_bfactors(args.water_pdb)
+        acc_and_bfactors = np.c_[accuracy_values_yes, bfactors]
+        plot_water_data(acc_and_bfactors, sorted_by=args.sort_key)
+        savepdb_new_bfac(args.water_pdb,accuracy_values_yes * 100,'acc')  # Save pdb with accuracies in position of b-factors
+
     # plot confidence for water molecules
     # get_low_accuracy_waters(accuracy_values_yes)
     plot_model_accuracy(accuracy_values_yes, figtitle='tested with yes cases')
-    plt.show()
+
+
+
 
     # 2) Test no-cases
     X_no_file_suffix = "_CI_X_no.npy"
@@ -178,8 +223,7 @@ if __name__ == "__main__":
     X_validate_no = tf.convert_to_tensor(X_no)
     y_validate_no = tf.convert_to_tensor(y_no)
     # flip the accuracy to reflect water prediction result
+    #accuracy_values_no = 1 - get_model_accuracy(model, X_validate_no, y_validate_no)
     accuracy_values_no = get_model_accuracy(model, X_validate_no, y_validate_no)
-    #accuracy_values_no = 1 - get_model_accuracy(model,
-    #                                            X_validate_no, y_validate_no)
     plot_model_accuracy(accuracy_values_no, figtitle='tested with no cases')
-    plt.show()
+
