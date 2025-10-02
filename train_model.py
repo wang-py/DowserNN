@@ -51,7 +51,11 @@ seed_val = 1029
 utils.set_random_seed(seed_val)
 
 fig_count = 0        # Initializing figure count
-def plt_savefig():
+def plt_savefig(fignm = None):
+    if fignm is not None:
+        plt.savefig(fignm, dpi = 200)
+        return
+    
     global training_pdb, fig_count
     fig_count += 1
     plt.savefig(f'{training_pdb}_nn{str(fig_count)}.png', dpi = 200)
@@ -248,7 +252,7 @@ def get_low_accuracy_waters(accuracy_values):
     np.savetxt('low_accuracy_water.txt', np.array(entry), fmt='%s')
 
 
-def plot_loss_history(history, train_pdb, val_pdb):
+def plot_loss_history(history, train_pdb, val_pdb, scale ='unscaled'):
     """
     plots the training and validation loss
     ----------------------------------------------------------------------------
@@ -263,7 +267,7 @@ def plot_loss_history(history, train_pdb, val_pdb):
     None
 
     """
-    fig, ax = plt.subplots(figsize=(8, 6))
+    fig, ax = plt.subplots(figsize=(8, 6), layout='tight')
     training_loss = history.history['loss']
     # check if there is validation loss
     try:
@@ -284,10 +288,103 @@ def plot_loss_history(history, train_pdb, val_pdb):
     # if test_loss is not None:
     #     ax.axhline(test_loss, color='r', linestyle='--',
     #                label='test cross entropy')
-    ax.set_title('training and validation loss')
     ax.legend()
-    plt_savefig()   # Save figure with the figure count prefix "_nn{fig_count}"
+    ax.set_title('training and validation loss')
+
+    if scale == 'unscaled':
+        plt_savefig()   # Save figure with the figure count prefix "_nn{fig_count}"
+        plt.show()
+        return
+    
+    if not any(x in scale for x in ['xlog','ylog']):
+        print(f'ERROR: unsupported scale parameter \"{scale}\" in the plot_loss_history() call.')
+        print('Supported scale parameters are [\"unscaled\", \"*xlog*ylog*\", \"*xlog*\", \"*ylog*\"]')
+        plt.show()
+        return
+    
+    suff=''
+    if 'xlog' in scale:
+        ax.set_xscale('log')       # Set x-axis to logarithmic scale
+        suff='xlog'
+    if 'ylog' in scale:
+        ax.set_yscale('log')       # Set y-axis to logarithmic scale
+        if suff == 'xlog': suff = 'xylog'
+        else:              suff = 'ylog'
+    ax.set_title('training and validation loss (log-scale)')
+    global fig_count
+    fig_count += fig_count
+    plt_savefig(f'{training_pdb}_nn{str(fig_count)}{suff}.png')   # Save figure with the figure count prefix "_nn{fig_count}"
     plt.show()
+
+    ##  plt.show(block=False) # Show without blocking, so we can modify
+    ##  user_input = plt.waitforbuttonpress()    # Wait for a button press or key press
+    ##  # DO NOT CLOSE FIG WINDOW, just keyboard/mouse click!
+    ##  
+    ##  # Modify axis scale to logarithmic one
+    ##  ax.set_title('training and validation loss (log-scale)')
+    ##  ax.set_xscale('log')       # Set x-axis to logarithmic scale
+    ##  ax.set_yscale('log')       # Set y-axis to logarithmic scale
+    ##  
+    ##  # fig.canvas.draw_idle()    # Redraw the figure to reflect the changes
+    ##  global fig_count
+    ##  plt_savefig(f'{training_pdb}_nn{str(fig_count)}log.png')   # Save figure with the figure count prefix "_nn{fig_count}"
+    ##  plt.show()
+
+def save_loss_history(history, train_pdb):
+    """
+    plots the training and validation loss
+    ----------------------------------------------------------------------------
+    history: history obj of training that contains the loss results
+
+    train_pdb: pdb name of training structure
+    ----------------------------------------------------------------------------
+    Returns:
+    None
+
+    """
+    # 1. Prepare the data
+    epochs = np.arange(1, len(history.history['loss']) + 1)   # Create column of Epoch range(1,len(history))
+    data = np.array(list(history.history.values())).T         # Transpose to have columns for each metric
+    #data = np.column_stack(list(history.history.values()))
+
+    # Combine epochs and data
+    combined_data = np.hstack((epochs[:, np.newaxis], data))       # The first column will be epochs, followed by your metrics
+
+    fmt_data = '%i'
+    for key in history.history.keys():   # add format for all history metrics
+        fmt_data = fmt_data + '\t%.5f' 
+
+    header_string = "\t".join(history.history.keys())
+    header_string = f'Epoch\t{header_string}'
+    #print(f'header: {header_string} fmt_data={fmt_data}\ndata:\n{history.history.values()}')
+    #print(f'data:\n{combined_data}')
+    np.savetxt(train_pdb+'_nn.hist', combined_data, fmt=fmt_data, header=header_string, comments='#')
+    
+
+
+def get_low_accuracy_waters(accuracy_values):
+    """
+    finds the index of water with a accuracy lower than 50%
+    ----------------------------------------------------------------------------
+    accuracy_values: ndarray
+    accuracy values of predicted water molecules
+    ----------------------------------------------------------------------------
+
+    Returns:
+    saves the index and accuracy values of water with accuracy lower than 50%
+    to a txt file named "low_accuracy_water.txt"
+
+    """
+    accuracy_threshold = 0.5
+    water_index = np.where(accuracy_values < accuracy_threshold)[0]
+    print(f"{water_index.shape[0]} waters have accuracy lower than" +
+          f" {accuracy_threshold}")
+    entry = []
+    for i in range(len(water_index)):
+        entry.append(f"{water_index[i]} {accuracy_values[water_index[i]]}")
+        # print(f"water indices: {water_index[i]} : {accuracy_values[water_index[i]]}")
+    np.savetxt('low_accuracy_water.txt', np.array(entry), fmt='%s')
+
 
 class MinMaxNormalization(tf.keras.layers.Layer):
     # MinMaxNormalization Class that normalizdes along ALL () or a specific axis (axis=0)
@@ -532,6 +629,8 @@ if __name__ == "__main__":
 
     # plot training loss
     plot_loss_history(history, training_pdb, testing_pdb)
+    plot_loss_history(history, training_pdb, testing_pdb, scale = 'xlog-ylog')    # Plot logarithmic scale  loss
+    save_loss_history(history, training_pdb)
 
     # 1) plot test set accuracy
     test_accuracies = get_model_accuracy(model, X_test, y_test)
