@@ -45,6 +45,9 @@ parser.add_argument('-p', '--test_percentage', type=float, default=0.2)
 parser.add_argument('-v', '--validate_pdb', type=str)
 parser.add_argument('-o', '--output_filename', type=str)
 parser.add_argument('-b', '--balance_y_no', type=float, default=1.0)
+parser.add_argument('-r', '--restart', type=str)
+parser.add_argument('-s', '--batch_size', type=int, default=32)
+parser.add_argument('-e', '--epochs', type=int, default=100)
 
 # make sure results are reproducible
 seed_val = 1029
@@ -509,10 +512,11 @@ if __name__ == "__main__":
     # NN model and training psarameters
     num_of_layers = 1
     hidden_dim = 4
-    epochs = 100
 
     # Load training and validation data
     args = parser.parse_args()
+    epochs = args.epochs
+    batch_size = args.batch_size
     training_pdb = args.train_pdb
     testing_pdb = args.validate_pdb
     testing_percentage = args.test_percentage
@@ -596,30 +600,41 @@ if __name__ == "__main__":
     # record weights during each training iteration
     # Create a neural network model
     callback = weights_visualization_callback(num_of_layers)
-    try:
-        #model = saving.load_model('test_data/DowserNN.keras')
-        f = open('test_data/DowserNN.keras', 'r')
+
+    ##
+    ## Initialize Model
+    ##
+    print('=' * 65)
+    if args.restart is None:
+        print(f"\nCreating a new model:")
+        print(f"Layers={num_of_layers}, Layer_dim={hidden_dim}, TrainData_dim={len(y_train)}.\n")
+        model = build_NN(num_of_layers, N, input_dim, hidden_dim, learning_rate=0.001)
+    else:
+        model_pth = args.restart
+        print(f"\nRestarting training from the model:\n    \"{model_pth}\"\n")
+        f = open(model_pth, 'r')
         f.close()
-        from keras.models import load_model
-        model = load_model('test_data/DowserNN.keras')
-        model.summary()
-    except OSError:
-        print("No exising model found, creating a new model")
-        print(f"TrainData_dim={len(y_train)}, layers={num_of_layers}, hidden_dim={hidden_dim}")
-        model = build_NN(num_of_layers, N, input_dim, hidden_dim,
-                         learning_rate=0.001)
-    # Train the model
+        try:
+            model = tf.keras.models.load_model(model_pth)
+            model.summary()
+        except:
+            print(f"Error: Cannot load the model {model_pth}.\nCheck keras-format compatibility.")
+            exit()
+    ##
+    ## Train the model
+    ##
     training_start_time = timeit.default_timer()
     if X_test is not None:
-        history = model.fit(X_train, y_train, sample_weight = w_train, epochs=epochs, batch_size=32,
+        history = model.fit(X_train, y_train, sample_weight = w_train, epochs=epochs, batch_size=batch_size,
                             validation_data=(X_test, y_test, w_test),
                             callbacks=callback)
     else:
-        history = model.fit(X_train, y_train, sample_weight = w_train, epochs=epochs, batch_size=32,
+        history = model.fit(X_train, y_train, sample_weight = w_train, epochs=epochs, batch_size=batch_size,
                             callbacks=callback)
     training_time = timeit.default_timer() - training_start_time
     print(f"NN training took {training_time:.2f} seconds")
-    print('-' * 70)
+    print('=' * 70)
+
     # save model
     if model_filename is None:
         model_filename = training_pdb + '.keras'
