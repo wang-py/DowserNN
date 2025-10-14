@@ -172,6 +172,41 @@ def plot_model_accuracy(accuracy_values, plot_title: str = 'model accuracy'):
     plt.show()
     pass
 
+def draw_model_accuracy_subset(model, X, y, setName: str, caseOpt: str = 'all'):
+    """
+    function that plots the accuracy of water prediction
+    ----------------------------------------------------------------------------
+    X: ndarray x 70
+    numpy array of descriptors
+
+    y: ndarray x 2
+    numpy array of descriptors
+
+    setName: str ('full', 'training', 'test', etc)
+
+    caseOpt: str ('all', 'yes', 'no')
+    ----------------------------------------------------------------------------
+    """
+    if caseOpt == 'all':
+        subset_indices = range(X.shape[0])
+        caseName = ''
+    elif caseOpt == 'yes':
+        subset_indices = np.where(y[:,0] == 1)[0]   # indices of Yes-cases
+        caseName = 'Yes-cases'
+    elif caseOpt == 'no':
+        subset_indices = np.where(y[:,0] == 0)[0]   # indices of No-cases
+        caseName = 'No-cases'
+    else:
+        print(f'ERROR in \"draw_model_accuracy_subset\":  caseOpt \"{caseOpt}\" is not supported.')
+        exit()
+    print(f'{setName} set {caseName}: nData = {len(subset_indices)}, indices[0:20]: {subset_indices[0:20]}')
+
+    X_subset = tf.gather(X, indices=subset_indices)
+    y_subset = tf.gather(y, indices=subset_indices)
+    accuracies = get_model_accuracy(model, X_subset, y_subset)
+    plot_model_accuracy(np.sort(accuracies), f'reproducing {setName} set {caseName}')
+    return accuracies
+
 def plot_dataset_prediction(model, X_data, y_data, plot_title: str = 'model accuracy'):
     """
     function that plots the accuracy of water prediction
@@ -279,10 +314,10 @@ def plot_loss_history(history, train_pdb, val_pdb, scale ='unscaled'):
         print('No test set used')
         validation_loss = None
 
-    ax.plot(training_loss, 'b-', label='training loss '
+    ax.plot(training_loss, 'b-', label=r'$\bf{training\ loss:}$ '
             + os.path.basename(train_pdb))
     if validation_loss:
-        ax.plot(validation_loss, 'r-', label='validation loss '
+        ax.plot(validation_loss, 'r-', label=r'$\bf{validation\ loss:}$ '
                 + os.path.basename(val_pdb))
     ax.set_xlabel('Epoch')
     ax.set_ylabel('Loss')
@@ -292,7 +327,8 @@ def plot_loss_history(history, train_pdb, val_pdb, scale ='unscaled'):
     #     ax.axhline(test_loss, color='r', linestyle='--',
     #                label='test cross entropy')
     ax.legend()
-    ax.set_title('training and validation loss')
+    global hidden_dim, batch_size, balance_y_no
+    ax.set_title(r'$\bf{training\ and\ validation\ loss}$:' + f' nn({hidden_dim}), batch({batch_size}), balance({balance_y_no})')
 
     if scale == 'unscaled':
         plt_savefig()   # Save figure with the figure count prefix "_nn{fig_count}"
@@ -313,7 +349,7 @@ def plot_loss_history(history, train_pdb, val_pdb, scale ='unscaled'):
         ax.set_yscale('log')       # Set y-axis to logarithmic scale
         if suff == 'xlog': suff = 'xylog'
         else:              suff = 'ylog'
-    ax.set_title('training and validation loss (log-scale)')
+    ax.set_title(r'$\bf{training\ and\ validation\ loss\ (log-scale)}$:' + f' nn({hidden_dim}), batch({batch_size}), balance({balance_y_no})')
     global fig_count
     fig_count += fig_count
     plt_savefig(f'{training_pdb}_nn{str(fig_count)}{suff}.png')   # Save figure with the figure count prefix "_nn{fig_count}"
@@ -363,30 +399,6 @@ def save_loss_history(history, train_pdb):
     #print(f'data:\n{combined_data}')
     np.savetxt(train_pdb+'_nn.hist', combined_data, fmt=fmt_data, header=header_string, comments='#')
     
-
-
-def get_low_accuracy_waters(accuracy_values):
-    """
-    finds the index of water with a accuracy lower than 50%
-    ----------------------------------------------------------------------------
-    accuracy_values: ndarray
-    accuracy values of predicted water molecules
-    ----------------------------------------------------------------------------
-
-    Returns:
-    saves the index and accuracy values of water with accuracy lower than 50%
-    to a txt file named "low_accuracy_water.txt"
-
-    """
-    accuracy_threshold = 0.5
-    water_index = np.where(accuracy_values < accuracy_threshold)[0]
-    print(f"{water_index.shape[0]} waters have accuracy lower than" +
-          f" {accuracy_threshold}")
-    entry = []
-    for i in range(len(water_index)):
-        entry.append(f"{water_index[i]} {accuracy_values[water_index[i]]}")
-        # print(f"water indices: {water_index[i]} : {accuracy_values[water_index[i]]}")
-    np.savetxt('low_accuracy_water.txt', np.array(entry), fmt='%s')
 
 
 class MinMaxNormalization(tf.keras.layers.Layer):
@@ -517,6 +529,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     epochs = args.epochs
     batch_size = args.batch_size
+    balance_y_no = args.balance_y_no
     training_pdb = args.train_pdb
     testing_pdb = args.validate_pdb
     testing_percentage = args.test_percentage
@@ -645,35 +658,47 @@ if __name__ == "__main__":
     # plot training loss
     plot_loss_history(history, training_pdb, testing_pdb)
     plot_loss_history(history, training_pdb, testing_pdb, scale = 'xlog-ylog')    # Plot logarithmic scale  loss
-    save_loss_history(history, training_pdb)
+    save_loss_history(history, training_pdb)   # save to file all history metrics
 
-    # 1) plot test set accuracy
-    test_accuracies = get_model_accuracy(model, X_test, y_test)
-    plot_model_accuracy(np.sort(test_accuracies), 'reproducing test set')
+    # 1) plot training set accuracy
+    # training_accuracies = get_model_accuracy(model, X_train, y_train)
+    # plot_model_accuracy(np.sort(training_accuracies), 'reproducing training set')
+    draw_model_accuracy_subset(model, X_train, y_train, 'training', 'all')   #  plot_model_accuracy for all dataset points
+    draw_model_accuracy_subset(model, X_train, y_train, 'training', 'yes')   #  plot_model_accuracy for Yes-cases only
+    draw_model_accuracy_subset(model, X_train, y_train, 'training',  'no')   #  plot_model_accuracy for No-cases only
 
-    # 2) plot training set accuracy
-    training_accuracies = get_model_accuracy(model, X_train, y_train)
-    plot_model_accuracy(np.sort(training_accuracies),
-                        'reproducing training set')
+    # 2) plot test set accuracy
+    # test_accuracies = get_model_accuracy(model, X_test, y_test)
+    # plot_model_accuracy(np.sort(test_accuracies), 'reproducing test set')
+    draw_model_accuracy_subset(model, X_test, y_test, 'test', 'all')   #  plot_model_accuracy for all dataset points
+    draw_model_accuracy_subset(model, X_test, y_test, 'test', 'yes')   #  plot_model_accuracy for Yes-cases only
+    draw_model_accuracy_subset(model, X_test, y_test, 'test',  'no')   #  plot_model_accuracy for No-cases only
 
-    # 3) plot confidence for water molecules
-    X_yes_file = X_file.rsplit('.', 1)[0] + '_yes.npy'
-    y_yes_file = y_file.rsplit('.', 1)[0] + '_yes.npy'
-    X_validate = tf.convert_to_tensor(np.load(X_yes_file))
-    y_validate = tf.convert_to_tensor(np.load(y_yes_file))
-    accuracy_values = get_model_accuracy(model, X_validate, y_validate)
-    get_low_accuracy_waters(accuracy_values)
-    plot_model_accuracy(np.sort(accuracy_values), 'reproducing water')
-    # print(np.sort(accuracy_values)[0])
+    # 3) plot full set accuracy
+    accuracy_values = draw_model_accuracy_subset(model, X_data, y_data, 'full', 'yes')   #  plot_model_accuracy for Yes-cases only
+    get_low_accuracy_waters(accuracy_values)                           #  Save low accuracy water indices
+    draw_model_accuracy_subset(model, X_data, y_data, 'full',  'no')   #  plot_model_accuracy for No-cases only
 
-    # 4) plot confidence for No-cases
-    X_no_file = X_file.rsplit('.', 1)[0] + '_no.npy'
-    y_no_file = y_file.rsplit('.', 1)[0] + '_no.npy'
-    X_validate = tf.convert_to_tensor(np.load(X_no_file))
-    y_validate = tf.convert_to_tensor(np.load(y_no_file))
-    accuracy_values = get_model_accuracy(model, X_validate, y_validate)
-    get_low_accuracy_waters(accuracy_values)
-    plot_model_accuracy(np.sort(accuracy_values), 'reproducing no-cases')
+    ## # 3) plot confidence for water molecules
+    ## X_yes_file = X_file.rsplit('.', 1)[0] + '_yes.npy'
+    ## y_yes_file = y_file.rsplit('.', 1)[0] + '_yes.npy'
+    ## X_validate = tf.convert_to_tensor(np.load(X_yes_file))
+    ## y_validate = tf.convert_to_tensor(np.load(y_yes_file))
+    ## print(f'Loaded from yes-file: nYes = {X_validate.shape[0]}')
+    ## accuracy_values = get_model_accuracy(model, X_validate, y_validate)
+    ## get_low_accuracy_waters(accuracy_values)
+    ## plot_model_accuracy(np.sort(accuracy_values), 'reproducing water')
+    ## # print(np.sort(accuracy_values)[0])
+    ## 
+    ## # 4) plot confidence for No-cases
+    ## X_no_file = X_file.rsplit('.', 1)[0] + '_no.npy'
+    ## y_no_file = y_file.rsplit('.', 1)[0] + '_no.npy'
+    ## X_validate = tf.convert_to_tensor(np.load(X_no_file))
+    ## y_validate = tf.convert_to_tensor(np.load(y_no_file))
+    ## print(f'Loaded from no-file: nNo = {X_validate.shape[0]}')
+    ## accuracy_values = get_model_accuracy(model, X_validate, y_validate)
+    ## get_low_accuracy_waters(accuracy_values)
+    ## plot_model_accuracy(np.sort(accuracy_values), 'reproducing no-cases')
 
 
     # visualizing weights
