@@ -158,12 +158,12 @@ def plot_model_accuracy(accuracy_values, plot_title: str = 'model accuracy'):
     accuracy_threshold = 0.5
     num_above_threshold = np.sum(accuracy_values > accuracy_threshold)
     num_of_water = accuracy_values.shape[0]
-    percent_above_threshold = num_above_threshold / num_of_water
+    percent_above_threshold = float(num_above_threshold) / float(num_of_water)
     fig, ax = plt.subplots(figsize=(8, 6))
     ax.bar(np.arange(num_of_water), accuracy_values)
     ax.axhline(accuracy_threshold, color='k', linestyle='--',
                label=f'accuracy threshold = {accuracy_threshold}\n' +
-               f'% data above threshold: {percent_above_threshold:.0%}')
+               f'% predictions above threshold: {percent_above_threshold:.1%}')
     ax.set_xlabel("data index")
     ax.set_ylabel("confidence")
     ax.set_title(plot_title)
@@ -222,12 +222,12 @@ def plot_dataset_prediction(model, X_data, y_data, plot_title: str = 'model accu
     accuracy_threshold = 0.5
     num_above_threshold = np.sum(accuracy_values > accuracy_threshold)
     num_of_water = accuracy_values.shape[0]
-    percent_above_threshold = num_above_threshold / num_of_water
+    percent_above_threshold = float(num_above_threshold) / float(num_of_water)
     fig, ax = plt.subplots(figsize=(8, 6))
     ax.bar(np.arange(num_of_water), accuracy_values)
     ax.axhline(accuracy_threshold, color='k', linestyle='--',
                label=f'accuracy threshold = {accuracy_threshold}\n' +
-               f'% water above threshold: {percent_above_threshold:.0%}')
+               f'% predictions above threshold: {percent_above_threshold:.1%}')
     plt.title(plot_title, fontsize=20, fontweight='bold')
     ax.set_xlabel("Index of data point", fontweight='bold')
     ax.set_ylabel("Confidence", fontweight='bold')
@@ -440,6 +440,100 @@ def min_max_normalizing(data):
     #print (norm_data[:2,:])
     return norm_data
 
+##
+## Implement custom metrics - individual accuracies for Yes- and No-cases:
+## custom metrics examples: https://medium.com/analytics-vidhya/custom-metrics-for-keras-tensorflow-ae7036654e05
+##
+def f1_score(y_true, y_pred):
+    # Round predictions to get binary values
+    y_pred = tf.round(y_pred)
+    
+    # Cast to float for calculations
+    y_true = tf.cast(y_true, tf.float32)
+    y_pred = tf.cast(y_pred, tf.float32)
+
+    # Calculate true positives, false positives, false negatives
+    tp = tf.reduce_sum(y_true * y_pred)
+    fp = tf.reduce_sum((1 - y_true) * y_pred)
+    fn = tf.reduce_sum(y_true * (1 - y_pred))
+
+    # Calculate precision, recall, and F1 score
+    precision = tp / (tp + fp + tf.keras.backend.epsilon())
+    recall = tp / (tp + fn + tf.keras.backend.epsilon())
+    f1 = 2 * ((precision * recall) / (precision + recall + tf.keras.backend.epsilon()))
+    return f1
+
+def _numpy_print_array(array):
+        print("Numpy array from custom metric:", array)
+        return 0.0 # py_function requires a return value
+def _numpy_print_values(array):
+        print(f'num_positives:{array[0]} num_negatives:{array[1]}, true_positives:{array[2]}, true_negatives:{array[3]}')
+        return 0.0 # py_function requires a return value
+
+from keras import backend as K
+def acc_yes(y_true, y_pred):
+    # num_cases_arr      = tf.reduce_sum(tf.cast(tf.equal(y_true, 1), tf.float32), axis = 0)
+    # y_pred_binary = tf.cast(tf.greater_equal(y_pred, 0.5), tf.float32)
+    # # Calculate true positives: where y_true is 1 and y_pred_binary is 1
+    # num_positives_arr  = tf.reduce_sum(tf.cast(tf.logical_and(tf.equal(y_true, 1), tf.equal(y_pred_binary, 1)), tf.float32), axis =0)
+    # num_positives = num_cases_arr[0]
+    # num_negatives = num_cases_arr[1]
+    # true_positives=num_positives_arr[0]
+    # true_negatives=num_positives_arr[1]
+    #tf.print(y_pred[0:5,0])   # print prediction values (tensor length should be < batch_seze)
+    num_positives  = K.sum(K.round(K.clip(y_true         , 0, 1)), axis = 0)[0]  # Get 0th-element of binary array[0 1]. Note arr[0]+arr[1]=Const=batch_size
+    true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)), axis = 0)[0]  # Note K.round(0.5) = 0.0 not 1.0
+    accuracy_pos = true_positives / (num_positives + K.epsilon() )
+    #tf.py_function(func = _numpy_print_values, inp=[[num_positives,num_negatives,true_positives,true_negatives]], Tout=tf.float32)
+    #tf.print(f'num_positives:{num_positives} num_negatives:{num_negatives}, true_positives:{true_positives}, true_negatives:{true_negatives}')
+    return accuracy_pos
+def acc_no(y_true, y_pred):
+    # y_pred_binary = tf.cast(tf.greater_equal(y_pred, 0.5), tf.float32)
+    # num_negatives = tf.reduce_sum(tf.cast(tf.equal(y_true, 1), tf.float32), axis = 0)[1]
+    # true_negatives = tf.reduce_sum(tf.cast(tf.logical_and(tf.equal(y_true, 1), tf.equal(y_pred_binary, 1)), tf.float32), axis =0)[1]
+    num_negatives  = K.sum(K.round(K.clip(y_true         , 0, 1)), axis = 0)[1]  # Get 1th-element of binary array[0 1]. Note arr[0]+arr[1]=Const=batch_size
+    true_negatives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)), axis = 0)[1]  # Note K.round(0.5) = 0.0 not 1.0
+    accuracy_no = true_negatives / (num_negatives + K.epsilon() )
+    return accuracy_no
+
+class acc_y(tf.keras.metrics.Metric):
+    def __init__(self, name='acc_y', **kwargs):
+        super().__init__(name=name, **kwargs)
+        self.total_correct = self.add_weight(name='tc', initializer='zeros')
+        self.total_samples = self.add_weight(name='ts', initializer='zeros')
+    def update_state(self, y_true, y_pred, sample_weight=None):
+        num_samples   = K.sum(K.round(K.clip(y_true         , 0, 1)), axis = 0)[0]
+        num_predicted = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)), axis = 0)[0]
+        self.total_correct.assign_add(num_predicted)
+        self.total_samples.assign_add(num_samples)
+        #num_cases_arr      = tf.reduce_sum(tf.cast(tf.equal(y_true, 1), tf.float32), axis = 0)
+        #y_pred_rounded = tf.round(y_pred)
+        #num_positives_arr  = tf.reduce_sum(tf.cast(tf.logical_and(tf.equal(y_true, 1), tf.equal(y_pred_rounded, 1)), tf.float32), axis =0)
+        #correct_predictions = tf.cast(tf.equal(y_true, y_pred_rounded), tf.float32)
+        #self.total_correct.assign_add(tf.reduce_sum(correct_predictions))
+        #self.total_samples.assign_add(tf.cast(tf.size(y_true), tf.float32))
+    def result(self):
+        return self.total_correct / self.total_samples
+    def reset_state(self):
+        self.total_correct.assign(0.)
+        self.total_samples.assign(0.)
+        
+class acc_n(tf.keras.metrics.Metric):
+    def __init__(self, name='acc_n', **kwargs):
+        super().__init__(name=name, **kwargs)
+        self.total_correct = self.add_weight(name='tc', initializer='zeros')
+        self.total_samples = self.add_weight(name='ts', initializer='zeros')
+    def update_state(self, y_true, y_pred, sample_weight=None):
+        num_samples   = K.sum(K.round(K.clip(y_true         , 0, 1)), axis = 0)[1]
+        num_predicted = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)), axis = 0)[1]
+        self.total_correct.assign_add(num_predicted)
+        self.total_samples.assign_add(num_samples)
+    def result(self):
+        return self.total_correct / self.total_samples
+    def reset_state(self):
+        self.total_correct.assign(0.)
+        self.total_samples.assign(0.)
+
 def build_NN(num_of_layers: int, N: int, input_dim: int, hidden_dim: int,
              learning_rate: float):
     """
@@ -499,7 +593,10 @@ def build_NN(num_of_layers: int, N: int, input_dim: int, hidden_dim: int,
     #model.compile(optimizer='rmsprop', loss='mse', metrics=['accuracy'], weighted_metrics=[])
     #model.compile(optimizer=Adam(learning_rate=learning_rate), loss='mse', metrics=['mae'])
     model.compile(optimizer=Adam(learning_rate=learning_rate),
-                  loss="binary_crossentropy", metrics=['accuracy'], weighted_metrics=[])   # weighted_metrics=['binary_crossentropy']
+                  loss="binary_crossentropy", metrics=['accuracy', acc_y(),acc_n()], weighted_metrics=[])   # weighted_metrics=['binary_crossentropy']
+    # USE custom metrics definition via Class: acc_y(),acc_n() because the functions: 'acc_yes', 'acc_no' are 20% wrong at batch_size < 8.
+    # all three metrics=['Accuracy','Precision','Recall', 'BinaryAccuracy', f1_score] show the same values, only 'AUC' value is independent
+    # custom metrics examples: https://medium.com/analytics-vidhya/custom-metrics-for-keras-tensorflow-ae7036654e05
     model.build((N, input_dim))
 
     model.summary()
@@ -640,10 +737,10 @@ if __name__ == "__main__":
     if X_test is not None:
         history = model.fit(X_train, y_train, sample_weight = w_train, epochs=epochs, batch_size=batch_size,
                             validation_data=(X_test, y_test, w_test),
-                            callbacks=callback)
+                            callbacks=callback, shuffle=True)   # by Default shuffle=True
     else:
         history = model.fit(X_train, y_train, sample_weight = w_train, epochs=epochs, batch_size=batch_size,
-                            callbacks=callback)
+                            callbacks=callback, shuffle=True)   # by Default shuffle=True
     training_time = timeit.default_timer() - training_start_time
     print(f"NN training took {training_time:.2f} seconds")
     print('=' * 70)
