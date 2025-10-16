@@ -307,6 +307,8 @@ def plot_loss_history(history, train_pdb, val_pdb, scale ='unscaled'):
     """
     fig, ax = plt.subplots(figsize=(8, 6), layout='tight')
     training_loss = history.history['loss']
+    nepochs = len(training_loss)
+    epochs = range(1,nepochs+1)
     # check if there is validation loss
     try:
         validation_loss = history.history['val_loss']
@@ -314,13 +316,13 @@ def plot_loss_history(history, train_pdb, val_pdb, scale ='unscaled'):
         print('No test set used')
         validation_loss = None
 
-    ax.plot(training_loss, 'b-', label=r'$\bf{training\ loss:}$ '
+    ax.plot(epochs, training_loss, 'b-', label=r'$\bf{training\ loss:}$ '
             + os.path.basename(train_pdb))
     if validation_loss:
-        ax.plot(validation_loss, 'r-', label=r'$\bf{validation\ loss:}$ '
+        ax.plot(epochs, validation_loss, 'r-', label=r'$\bf{validation\ loss:}$ '
                 + os.path.basename(val_pdb))
-    ax.set_xlabel('Epoch')
-    ax.set_ylabel('Loss')
+    ax.set_xlabel('Epoch', fontsize=14, fontweight='bold')
+    ax.set_ylabel('Loss', fontsize=14, fontweight='bold')
     # ax.axhline(training_loss, color='b', linestyle='--',
     #           label='training cross entropy')
     # if test_loss is not None:
@@ -328,7 +330,7 @@ def plot_loss_history(history, train_pdb, val_pdb, scale ='unscaled'):
     #                label='test cross entropy')
     ax.legend()
     global hidden_dim, batch_size, balance_y_no
-    ax.set_title(r'$\bf{training\ and\ validation\ loss}$:' + f' nn({hidden_dim}), batch({batch_size}), balance({balance_y_no})')
+    ax.set_title(r'$\bf{training\ and\ validation\ loss}$:' + f' nn({hidden_dim}), batch({batch_size}), balance({balance_y_no})', fontsize=12)
 
     if scale == 'unscaled':
         plt_savefig()   # Save figure with the figure count prefix "_nn{fig_count}"
@@ -349,9 +351,9 @@ def plot_loss_history(history, train_pdb, val_pdb, scale ='unscaled'):
         ax.set_yscale('log')       # Set y-axis to logarithmic scale
         if suff == 'xlog': suff = 'xylog'
         else:              suff = 'ylog'
-    ax.set_title(r'$\bf{training\ and\ validation\ loss\ (log-scale)}$:' + f' nn({hidden_dim}), batch({batch_size}), balance({balance_y_no})')
+    ax.set_title(r'$\bf{training\ and\ validation\ loss\ (log-scale)}$:' + f' nn({hidden_dim}), batch({batch_size}), balance({balance_y_no})', fontsize=12)
     global fig_count
-    fig_count += fig_count
+    #fig_count += 1
     plt_savefig(f'{training_pdb}_nn{str(fig_count)}{suff}.png')   # Save figure with the figure count prefix "_nn{fig_count}"
     plt.show()
 
@@ -400,6 +402,125 @@ def save_loss_history(history, train_pdb):
     np.savetxt(train_pdb+'_nn.hist', combined_data, fmt=fmt_data, header=header_string, comments='#')
     
 
+def plot_accuracy_history(history, train_pdb, val_pdb, scale ='unscaled'):
+    """
+    plots the training and validation accuracies
+    ----------------------------------------------------------------------------
+    history: history obj of training that contains the loss results
+
+    train_pdb: pdb name of training structure
+
+    val_pdb: pdb name of validation structure
+    ----------------------------------------------------------------------------
+
+    Returns:
+    None
+
+    """
+    try:
+        training_acc = history.history['accuracy']
+    except KeyError:
+        print('No accuracy metrics used')
+        return
+    # check if there is validation Accuracy
+    try:
+        validation_acc = history.history['val_accuracy']
+    except KeyError:
+        print('No validation set used')
+        validation_acc = None
+    # check if there is custom metrics: Accuracy for yes and no cases
+    try:
+        acc_p = history.history['acc_p']
+        if validation_acc:
+            val_acc_p = history.history['val_acc_p']
+    except KeyError:
+        print('No accuracy for yes-cases used.')
+        acc_p = None
+    try:
+        acc_n = history.history['acc_n']
+        if validation_acc:
+            val_acc_n = history.history['val_acc_n']
+    except KeyError:
+        print('No accuracy for no-cases used.')
+        acc_n = None
+    n_subplots = 1
+    if (acc_p or acc_n):
+       n_subplots += 1
+       if validation_acc:
+            n_subplots += 1
+    figsize_y = 1 + 3 * n_subplots
+    nepochs = len(training_acc)
+    epochs = range(1,nepochs+1)
+
+    fig, axis = plt.subplots(nrows = n_subplots,ncols = 1, sharex='row', figsize=(8, figsize_y),layout='tight')   # layout='tight'
+    #plt.subplots_adjust(left=0.09, bottom=0.08,top=0.94,right=0.98,wspace=1.0,hspace=0.1)   # Fine tuning but not suitable for log-scale
+    global hidden_dim, batch_size, balance_y_no
+    fig.suptitle(r'$\bf{Accuracy}$:' + f' nn({hidden_dim}), batch({batch_size}), balance({balance_y_no})', fontsize=14, y=0.99)
+    fig.supxlabel('Epoch', fontsize=14, fontweight='bold',y=0.002)
+
+    if n_subplots > 1: ax = axis[0]
+    else:              ax = axis
+    ax.plot(epochs,training_acc, 'b-', label=r'$\bf{training\ acc:}$ ' + os.path.basename(train_pdb))
+    if validation_acc:
+       ax.plot(epochs,validation_acc, 'r-', label=r'$\bf{validation\ acc:}$ ' + os.path.basename(val_pdb))
+    ax.set_ylabel('Accuracy', fontsize=12, fontweight='bold')
+
+    ifig = 0
+    if (acc_p or acc_n):
+        ifig += 1
+        axis[ifig].plot(epochs,training_acc, 'b-', label=r'$\bf{acc}$    : accuracy of all samples')
+        if acc_p:
+            axis[ifig].plot(epochs,acc_p, 'b:', label=r'$\bf{acc\_p}$: accuracy of positive samples')
+        if acc_n:
+            axis[ifig].plot(epochs,acc_n, 'b--', label=r'$\bf{acc\_n}$: accuracy of negative samples')
+        axis[ifig].set_ylabel('Training', fontsize=12, fontweight='bold')
+        if validation_acc:
+            ifig += 1
+            axis[ifig].plot(epochs,validation_acc, 'r-', label=r'$\bf{val\_acc}$    : accuracy of all samples')
+            if acc_p:
+                axis[ifig].plot(epochs,val_acc_p, 'r:', label=r'$\bf{val\_acc\_p}$: accuracy of positive samples')
+            if acc_n:
+                axis[ifig].plot(epochs,val_acc_n, 'r--', label=r'$\bf{val\_acc\_n}$: accuracy of negative samples')
+            axis[ifig].set_ylabel('Validation', fontsize=12, fontweight='bold')
+    for ifig in range(n_subplots):
+        ax = axis
+        if n_subplots > 1:
+            ax = axis[ifig]
+        ax.legend()
+        ax.set_xlim(1, nepochs)
+        if ifig < n_subplots - 1:
+            axis[ifig].label_outer()     # Hide x-labels and tick labels for top suplots
+
+    if scale == 'unscaled':
+        plt_savefig()   # Save figure with the figure count prefix "_nn{fig_count}"
+        plt.show()
+        return
+    
+    if not any(x in scale for x in ['xlog','ylog']):
+        print(f'ERROR: unsupported scale parameter \"{scale}\" in the plot_accuracy_history() call.')
+        print('Supported scale parameters are [\"unscaled\", \"*xlog*ylog*\", \"*xlog*\", \"*ylog*\"]')
+        plt.show()
+        return
+    
+    suff=''
+    for ifig in range(n_subplots):
+        ax = axis
+        if n_subplots > 1:
+            ax = axis[ifig]
+        if 'xlog' in scale:
+            ax.set_xscale('log')       # Set x-axis to logarithmic scale
+            suff='xlog'
+        if 'ylog' in scale:
+            ax.set_yscale('log')       # Set y-axis to logarithmic scale
+            if suff == 'xlog': suff = 'xylog'
+            else:              suff = 'ylog'
+    fig.suptitle(r'$\bf{Accuracy\ (log-scale)}$:' + f' nn({hidden_dim}), batch({batch_size}), balance({balance_y_no})', fontsize=14, y=0.99)
+
+    global fig_count
+    #fig_count += 1
+    plt_savefig(f'{training_pdb}_nn{str(fig_count)}{suff}.png')   # Save figure with the figure count prefix "_nn{fig_count}"
+    plt.show()
+
 
 class MinMaxNormalization(tf.keras.layers.Layer):
     # MinMaxNormalization Class that normalizdes along ALL () or a specific axis (axis=0)
@@ -444,6 +565,11 @@ def min_max_normalizing(data):
 ## Implement custom metrics - individual accuracies for Yes- and No-cases:
 ## custom metrics examples: https://medium.com/analytics-vidhya/custom-metrics-for-keras-tensorflow-ae7036654e05
 ##
+
+# USE custom metrics definition via Class: acc_p(),acc_n() because the functions: 'acc_yes', 'acc_no' are 20% wrong at batch_size < 8.
+# all three metrics=['Accuracy','Precision','Recall', 'BinaryAccuracy', f1_score] show the same values, only 'AUC' value is independent
+# custom metrics examples: https://medium.com/analytics-vidhya/custom-metrics-for-keras-tensorflow-ae7036654e05
+
 def f1_score(y_true, y_pred):
     # Round predictions to get binary values
     y_pred = tf.round(y_pred)
@@ -496,8 +622,8 @@ def acc_no(y_true, y_pred):
     accuracy_no = true_negatives / (num_negatives + K.epsilon() )
     return accuracy_no
 
-class acc_y(tf.keras.metrics.Metric):
-    def __init__(self, name='acc_y', **kwargs):
+class acc_p(tf.keras.metrics.Metric):
+    def __init__(self, name='acc_p', **kwargs):
         super().__init__(name=name, **kwargs)
         self.total_correct = self.add_weight(name='tc', initializer='zeros')
         self.total_samples = self.add_weight(name='ts', initializer='zeros')
@@ -517,7 +643,7 @@ class acc_y(tf.keras.metrics.Metric):
     def reset_state(self):
         self.total_correct.assign(0.)
         self.total_samples.assign(0.)
-        
+
 class acc_n(tf.keras.metrics.Metric):
     def __init__(self, name='acc_n', **kwargs):
         super().__init__(name=name, **kwargs)
@@ -593,8 +719,8 @@ def build_NN(num_of_layers: int, N: int, input_dim: int, hidden_dim: int,
     #model.compile(optimizer='rmsprop', loss='mse', metrics=['accuracy'], weighted_metrics=[])
     #model.compile(optimizer=Adam(learning_rate=learning_rate), loss='mse', metrics=['mae'])
     model.compile(optimizer=Adam(learning_rate=learning_rate),
-                  loss="binary_crossentropy", metrics=['accuracy', acc_y(),acc_n()], weighted_metrics=[])   # weighted_metrics=['binary_crossentropy']
-    # USE custom metrics definition via Class: acc_y(),acc_n() because the functions: 'acc_yes', 'acc_no' are 20% wrong at batch_size < 8.
+                  loss="binary_crossentropy", metrics=['accuracy',acc_p(),acc_n()], weighted_metrics=[])   # weighted_metrics=['binary_crossentropy']
+    # USE custom metrics definition via Class: acc_p(),acc_n() because the functions: 'acc_yes', 'acc_no' are 20% wrong at batch_size < 8.
     # all three metrics=['Accuracy','Precision','Recall', 'BinaryAccuracy', f1_score] show the same values, only 'AUC' value is independent
     # custom metrics examples: https://medium.com/analytics-vidhya/custom-metrics-for-keras-tensorflow-ae7036654e05
     model.build((N, input_dim))
@@ -756,6 +882,9 @@ if __name__ == "__main__":
     plot_loss_history(history, training_pdb, testing_pdb)
     plot_loss_history(history, training_pdb, testing_pdb, scale = 'xlog-ylog')    # Plot logarithmic scale  loss
     save_loss_history(history, training_pdb)   # save to file all history metrics
+    # plot training Accuracies
+    plot_accuracy_history(history, training_pdb, testing_pdb)
+    plot_accuracy_history(history, training_pdb, testing_pdb, scale = 'xlog-ylog')
 
     # 1) plot training set accuracy
     # training_accuracies = get_model_accuracy(model, X_train, y_train)
