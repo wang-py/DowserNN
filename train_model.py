@@ -122,18 +122,44 @@ def split_randomize_train_test_set(X_data, y_data, w_data, percent: float):
     """
     index_range = X_data.shape[0]
     indices = range(index_range)
-    num_of_test_pts = int(index_range * percent)
-    test_index = random.sample(indices, num_of_test_pts)
-    train_index = list(set(indices) - set(test_index))
+
+    if (percent < 1.0 and percent >=0.0):
+        # percent is a portion of the total data set (randomly sampled)
+        print('Splitting Data: (p < 1) - treat p as a portion of the total data set (randomly sampled).')
+        num_of_test_pts = int(index_range * percent)
+        test_index = random.sample(indices, num_of_test_pts)
+        train_index = list(set(indices) - set(test_index))
+
+    elif percent >= 1.0:
+        # percent is a Number of test set data points with equal number of Yes and No samples
+        print('Splitting Data: (p >= 1) - treat p as a Number of test set data points with equal number of Yes and No samples.')
+        num_No_pts = round(percent / 2.0)
+        num_Yes_pts = round(percent) - num_No_pts
+        indices_yes = list(np.where(y_data[:,0] == 1)[0])   # indices of Yes-cases
+        indices_no  = list(np.where(y_data[:,0] == 0)[0])   # indices of No-cases
+        test_index_Yes  = random.sample(indices_yes, num_Yes_pts)   # test indices of Yes-cases
+        test_index_No   = random.sample(indices_no,  num_No_pts)    # test indices of No-cases
+        test_index  = test_index_Yes + test_index_No
+        train_index = list(set(indices) - set(test_index))
+        #print (f'num_Yes_pts = {num_Yes_pts} num_No_pts = {num_No_pts}')
+        #print (f'indices_yes[:20]: {indices_yes[:20]}\nindices_no[:20]: {indices_no[:20]}')
+        #print (f'test_index_Yes[:20]: {test_index_Yes[:20]}\ntest_index_No[:20]: {test_index_No[:20]}')
+        #print (f'test_index_Yes[:20] SORTED: {sorted(test_index_Yes)[:20]}\ntest_index_No[:20] SORTED: {sorted(test_index_No)[:20]}')
+
+    else:
+        print(f'ERROR: invalid test set portion parameter \"percent\" {percent}.')
+        exit()
     
     ## test_index = np.array(random.sample(indices, num_of_test_pts))
     ## train_index = np.array(list(set(indices) - set(test_index)))
-    ## print(f'test_index[:30]: {test_index[:30]}')
-    ## print(f'test_index[num_of_test_pts-30:]: {test_index[num_of_test_pts-30:]}')
-    ## print(f'train_index[:30]: {train_index[:30]}')
-    ## print(f'train_index[num_of_test_pts-30:]: {train_index[num_of_test_pts-30:]}')
-    ## print(f'Num of Yes/No samples in the test_index: {np.sum(test_index < 2743)}(Yes), {np.sum(test_index >= 2743)}(No) ')
-    ## print(f'Num of Yes/No samples in the train_index: {np.sum(train_index < 2743)}(Yes), {np.sum(train_index >= 2743)}(No) ')
+    ## nYes = np.sum(y_data[:,0] == 1)
+    ## test_index = np.array(test_index)
+    ## train_index = np.array(train_index)
+    ## print(f'test_index[:20]: {test_index[:20]}')
+    ## print(f'train_index[:20]: {train_index[:20]}')
+    ## print(f'train_index[nYes-20:nYes+20]: {train_index[nYes-20:nYes+20]}')
+    ## print(f'Num of Yes/No samples in the test_index: {np.sum(test_index < nYes)}(Yes), {np.sum(test_index >= nYes)}(No) ')
+    ## print(f'Num of Yes/No samples in the train_index: {np.sum(train_index < nYes)}(Yes), {np.sum(train_index >= nYes)}(No) ')
     ## exit()
     test_X = tf.gather(X_data, indices=test_index)
     test_y = tf.gather(y_data, indices=test_index)
@@ -142,6 +168,8 @@ def split_randomize_train_test_set(X_data, y_data, w_data, percent: float):
     train_y = tf.gather(y_data, indices=train_index)
     train_w = tf.gather(w_data, indices=train_index)
 
+    print(f'\tNum of Yes/No samples in the test_index: {np.sum(test_y[:,0] == 1)}(Yes), {np.sum(test_y[:,0] == 0)}(No)')
+    print(f'\tNum of Yes/No samples in the train_index: {np.sum(train_y[:,0] == 1)}(Yes), {np.sum(train_y[:,0] == 0)}(No)')
     return train_X, train_y, train_w, test_X, test_y, test_w
 
 def plot_model_accuracy(accuracy_values, plot_title: str = 'model accuracy'):
@@ -750,12 +778,12 @@ if __name__ == "__main__":
 
     # Load training and validation data
     args = parser.parse_args()
-    epochs = args.epochs
-    batch_size = args.batch_size
-    balance_y_no = args.balance_y_no
     training_pdb = args.train_pdb
     testing_pdb = args.validate_pdb
     testing_percentage = args.test_percentage
+    balance_y_no = args.balance_y_no
+    epochs = args.epochs
+    batch_size = args.batch_size
     model_filename = args.output_filename
     X_file = training_pdb + "_CI_X.npy"
     y_file = training_pdb + "_CI_y.npy"
@@ -816,9 +844,6 @@ if __name__ == "__main__":
             X_train, y_train, w_train, X_test, y_test, w_test =\
                 split_randomize_train_test_set(X_data, y_data, w_data,
                                                percent=testing_percentage)
-            # X_train, y_train, X_test, y_test =\
-            #     generate_train_test_set(X_data, y_data,
-            #                             percent=testing_percentage)
         else:
             X_train = X_data
             y_train = y_data
