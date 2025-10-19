@@ -937,23 +937,38 @@ def stride_sites(sites, closest_at_dist, Nref, ratio, site_title: str):
     sites_strided: n x 3
     closest_at_dist_strided: n
     """
-    if Nref <= 0:
-        print(f'         Number of no-water cavity sites {site_title}: {len(sites)}. No striding for balancing was applied.')
-        return sites, closest_at_dist
-  
     num = len(sites)
+    Ngoal = round(Nref * ratio)
     if len(closest_at_dist) != num:
         print(f'ERROR in stride_sites: sites array size ({num}) differs from the closest_at_dist size ({len(closest_at_dist)})')
         exit()
-    interval = round( float(num) / float(Nref) / ratio)   # striding interval
-    #print(f'{site_title} striding_interval = {interval}')
-    interval = interval if interval >=1 else 1
+    if Nref <= 0 or num <= Ngoal:
+        print(f'         Number of no-water cavity sites {site_title}: {num}. No striding for balancing was applied.')
+        if num <= Ngoal:
+            print(f'         Striding was not needed because Number of no-water sites {num} <= {Ngoal} - specified balanced Number (Nref*rate).')
+        return sites, closest_at_dist
+    
     sites_strided = []
     closest_at_dist_strided = []
-    for i in range(0, num, interval):
+    strided_indicies = np.round(np.linspace(0, num - 1, Ngoal)).astype(int)
+    #print(f'Num_strided = {len(strided_indicies)}')
+    #print(f'strided_indicies[:10]: {strided_indicies[:10]}\nstrided_indicies[Ngoal-10:-1]: {strided_indicies[Ngoal-10:-1]}')
+    for i in strided_indicies:
          sites_strided.append(sites[i])
          closest_at_dist_strided.append(closest_at_dist[i])
-    print(f'Balanced Number of no-water cavity sites {site_title}: {len(sites_strided)}, striding_interval = {interval}')
+
+    # interval = int( float(num) / float(Nref) / ratio) # striding interval is underestimated, which will be corrected by checking Nref in a loop.
+    # interval = interval if interval >=1 else 1
+    # print(f'{site_title} striding_interval = {interval}')
+    # n_sites = 0
+    # for i in range(0, num, interval):
+    #      sites_strided.append(sites[i])
+    #      closest_at_dist_strided.append(closest_at_dist[i])
+    #      n_sites += 1
+    #      if n_sites == Nref:   # Stop
+    #          break
+
+    print(f'Balanced Number of no-water cavity sites {site_title}: {len(sites_strided)}, striding_interval = {(float(num) / float(Nref) / ratio):.1f}')
     return sites_strided, closest_at_dist_strided
 
 def search_close_no_water_sites(atoms, cavities, n, Nref: int, cutoff1, cutoff2, ratio1, ratio2):
@@ -1621,6 +1636,7 @@ parser = argparse.ArgumentParser(
 parser.add_argument('-p', '--input_pdb', type=str)
 parser.add_argument('-c', '--input_cavities', type=str)
 parser.add_argument('-d', '--descriptor_type', required=False, default='Z-matrix', choices=['Z-matrix','AEV'],help='Descriptor type. Use option: \"Z-matrix\" or \"AEV\"')
+parser.add_argument('-b', '--balance_data', type=bool, default=True, help='Balance yes/no samples by striding no-water-sites')
 
 if __name__ == '__main__':
     # Generate training and validation data
@@ -1674,9 +1690,17 @@ if __name__ == '__main__':
     #interval_of_no_cases = int(num_of_cav / training_yes_X.shape[0])
     #no_water_cav = search_no_water_sites(total_data, cavities_data, n=10, interval=interval_of_no_cases / 2)
 
-    #no_water_cav = search_close_no_water_sites(total_data, cavities_data, n=10, Nref=len(water_OK),cutoff1=3.5,cutoff2=4.5,ratio1=0.1,ratio2=0.05) # Generate Nref number of No-water cavity sites
-    # Set Nref=0 because no balancing of No-cases is required. Data balancing is taken care by adjusting 1) water weights; 2) --balance_y_no
-    no_water_cav = search_close_no_water_sites(total_data, cavities_data, n=10, Nref=0,cutoff1=3.5,cutoff2=4.5,ratio1=0.5,ratio2=0.02) # Generate ALL No-water cavity sites, No striding within cutoff1
+    balance_np_samples = args.balance_data
+    if balance_np_samples:
+        # Generate Nref number of No-water cavity sites
+        no_water_cav = search_close_no_water_sites(total_data, cavities_data, n=10,
+                            Nref=len(water_OK),    cutoff1=3.5,cutoff2=4.5,ratio1=0.1,ratio2=0.05) # Generate Nref number of No-water cavity sites
+    else:
+        # Generate ALL No-water cavity sites, No striding within cutoff1
+        # Set Nref=0 because no balancing of No-cases is required.
+        # Data balancing is taken care at the traning model stage by adjusting 1) water weights; 2) --balance_y_no
+        no_water_cav = search_close_no_water_sites(total_data, cavities_data, n=10,
+                            Nref=0,                cutoff1=3.5,cutoff2=4.5,ratio1=0.05,ratio2=0.02) # Generate ALL No-water cavity sites, No striding within cutoff1
 
     #training_no_X = generate_training_no_X(total_data, cavities_data, n=10,interval=interval_of_no_cases / 2)
 
