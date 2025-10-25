@@ -48,6 +48,7 @@ parser.add_argument('-b', '--balance_y_no', type=float, default=1.0)
 parser.add_argument('-r', '--restart', type=str)
 parser.add_argument('-s', '--batch_size', type=int, default=32)
 parser.add_argument('-e', '--epochs', type=int, default=100)
+parser.add_argument('-m', '--metric_recompute', type=int, default=0)
 
 # make sure results are reproducible
 seed_val = 1029
@@ -232,6 +233,9 @@ def draw_model_accuracy_subset(model, X, y, setName: str, caseOpt: str = 'all'):
     X_subset = tf.gather(X, indices=subset_indices)
     y_subset = tf.gather(y, indices=subset_indices)
     accuracies = get_model_accuracy(model, X_subset, y_subset)
+    nPos = np.sum(y_subset[:,0] == 1)
+    nPos_pred = np.sum(accuracies * y_subset[:,0] > 0.5)
+    print(f'reproducing {setName} set {caseName}: nPos_pred={nPos_pred}, nPos={nPos}, rate={float(nPos_pred)/float(nPos + tf.keras.backend.epsilon()):.4f}')
     plot_model_accuracy(np.sort(accuracies), f'reproducing {setName} set {caseName}')
     return accuracies
 
@@ -598,6 +602,12 @@ def min_max_normalizing(data):
 # all three metrics=['Accuracy','Precision','Recall', 'BinaryAccuracy', f1_score] show the same values, only 'AUC' value is independent
 # custom metrics examples: https://medium.com/analytics-vidhya/custom-metrics-for-keras-tensorflow-ae7036654e05
 
+#
+# ALL metric values differ between model.fit and model.predict stages because model.fit weights are updated every batch cycle.
+# See at: https://www.reddit.com/r/tensorflow/comments/1gb80bf/difference_between_results_of_modelfit_and/
+# But validation is computed with final weights this is why validation metrics agrees in model.fit and model.predict.
+# To maximize agreement of trainig metrics 1) use maximum batch_size; 2) minimal learning_rate
+#
 def f1_score(y_true, y_pred):
     # Round predictions to get binary values
     y_pred = tf.round(y_pred)
@@ -624,7 +634,7 @@ def _numpy_print_values(array):
         print(f'num_positives:{array[0]} num_negatives:{array[1]}, true_positives:{array[2]}, true_negatives:{array[3]}')
         return 0.0 # py_function requires a return value
 
-from keras import backend as K
+import tensorflow.keras.backend as K
 def acc_yes(y_true, y_pred):
     # num_cases_arr      = tf.reduce_sum(tf.cast(tf.equal(y_true, 1), tf.float32), axis = 0)
     # y_pred_binary = tf.cast(tf.greater_equal(y_pred, 0.5), tf.float32)
@@ -658,14 +668,19 @@ class acc_p(tf.keras.metrics.Metric):
     def update_state(self, y_true, y_pred, sample_weight=None):
         num_samples   = K.sum(K.round(K.clip(y_true         , 0, 1)), axis = 0)[0]
         num_predicted = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)), axis = 0)[0]
+        # 2) Method-2
+        # y_pred_binary = tf.cast(tf.greater_equal(y_pred, 0.5), tf.float32)
+        # num_predicted = tf.reduce_sum(tf.cast(tf.logical_and(tf.equal(y_true, 1), tf.equal(y_pred_binary, 1)), tf.float32), axis =0)[0]
+        # num_samples   = tf.reduce_sum(tf.cast(tf.equal(y_true, 1), tf.float32), axis = 0)[0]
+        # 3) Method-3
+        # num_samples   = tf.reduce_sum(tf.cast(tf.equal(y_true, 1), tf.int32), axis = 0)[0]
+        # ### num_samples = tf.cast(tf.size(y_true), tf.float32)
+        # y_pred_rounded = tf.round(y_pred)
+        # num_predicted = tf.reduce_sum(tf.cast(tf.logical_and(tf.equal(y_true, 1), tf.equal(y_pred_rounded, 1)), tf.int32), axis =0)[0]
+        # #tf.print('tf.executing_eagerly:',tf.executing_eagerly())
+        # #tf.print(f'num_predicted[0]:{num_predicted[0]}, num_positives_arr[0]: {num_positives_arr[0]}')
         self.total_correct.assign_add(num_predicted)
         self.total_samples.assign_add(num_samples)
-        #num_cases_arr      = tf.reduce_sum(tf.cast(tf.equal(y_true, 1), tf.float32), axis = 0)
-        #y_pred_rounded = tf.round(y_pred)
-        #num_positives_arr  = tf.reduce_sum(tf.cast(tf.logical_and(tf.equal(y_true, 1), tf.equal(y_pred_rounded, 1)), tf.float32), axis =0)
-        #correct_predictions = tf.cast(tf.equal(y_true, y_pred_rounded), tf.float32)
-        #self.total_correct.assign_add(tf.reduce_sum(correct_predictions))
-        #self.total_samples.assign_add(tf.cast(tf.size(y_true), tf.float32))
     def result(self):
         return self.total_correct / self.total_samples
     def reset_state(self):
@@ -687,6 +702,46 @@ class acc_n(tf.keras.metrics.Metric):
     def reset_state(self):
         self.total_correct.assign(0.)
         self.total_samples.assign(0.)
+        
+#
+#  Recompute Metrics at the end of epoch
+#
+class RecomputeTrainingMetrics(tf.keras.callbacks.Callback):
+    def __init__(self, training_data, training_labels, interval=10):
+        super().__init__()
+        self.training_data = training_data
+        self.training_labels = training_labels
+        self.interval = interval
+
+    def on_epoch_end(self, epoch, logs=None):
+        if (epoch+1) % self.interval != 0: return
+        
+        logs = logs or {}
+        
+        # 1. Re-evaluate the model on the full training dataset
+        # verbose=0 suppresses the progress bar for this evaluation
+        evaluation_results = self.model.evaluate(self.training_data,  self.training_labels, 
+                                                 verbose=0,   return_dict=True  )
+
+        # 2. Extract the recomputed metric(s)
+        recomputed_train_loss     = evaluation_results.get('loss')
+        recomputed_train_accuracy = evaluation_results.get('accuracy')
+        recomputed_train_acc_p    = evaluation_results.get('acc_p')
+        recomputed_train_acc_n    = evaluation_results.get('acc_n')
+
+        # 3. Update the logs dictionary with the recomputed values
+        # This will override the default per-batch averaged values.
+        if recomputed_train_accuracy is not None:
+            logs['accuracy'] = recomputed_train_accuracy
+        if recomputed_train_loss is not None:
+            logs['loss'] = recomputed_train_loss
+        if recomputed_train_acc_p is not None:
+            logs['acc_p'] = recomputed_train_acc_p
+        if recomputed_train_acc_n is not None:
+            logs['acc_n'] = recomputed_train_acc_n
+            
+        print(f"\nEpoch {epoch+1}: Recomputed training accuracy: {recomputed_train_accuracy:.4f}, "
+              f"Recomputed training loss: {recomputed_train_loss:.4f}")
 
 def build_NN(num_of_layers: int, N: int, input_dim: int, hidden_dim: int,
              learning_rate: float):
@@ -822,11 +877,20 @@ if __name__ == "__main__":
         exit()
    
    # balance_y_no cases representation of water data in the loss function compare to No-cases, 1 means the same, 0.5/2 means twice under-/over-represented.
-    weight_yes_multiplier = args.balance_y_no * float(nNo) / float(nYes)
+    if testing_percentage < 1.0  and testing_percentage >=0.0:
+        nYes_train = nYes                                      # skip  (1.0-testing_percentage) in the int( (1.0-testing_percentage) * nYes)
+        nNo_train  = nNo                                       # skip  (1.0-testing_percentage) in the int( (1.0-testing_percentage) * nNo)
+    elif testing_percentage >= 1.0:
+        nNo_train  = nNo  - round(testing_percentage/2.0)                              # nNo_test  = round(testing_percentage/2.0)
+        nYes_train = nYes - round(testing_percentage) + round(testing_percentage/2.0)  # nYes_test = round(testing_percentage) - nNo_test
+    weight_yes_multiplier = args.balance_y_no * float(nNo_train) / float(nYes_train)
+
     w_data = np.where(y[:, 0] == 1, weight_yes_multiplier, 1.0) # apply weight_yes_multiplier for Yes-cases(y[:, 0] == 1), otherwise weight = 1.0.
     # w_data = np.ones(N, dtype=float)
     # w_data[:nYes] = w_data[:nYes] * weight_yes_multiplier
-    print(f'nYes = {nYes} nNo = {nNo} balance_y_no = {args.balance_y_no}: weight_yes_multiplier = {weight_yes_multiplier}')
+    print(f'Estimated number of train/test samples (not exact at testing_percentage < 1) for computing weights:')
+    print(f'nYes = {nYes} nNo = {nNo}')
+    print(f'nNo_train / nYes_train = ({nNo_train})/({nYes_train}), balance_y_no = {args.balance_y_no}: weight_yes_multiplier = {weight_yes_multiplier}')
     print(f'w_data[{nYes-3}:{nYes+3}] = {w_data[nYes-3:nYes+3]}')
     #print(f'y[{nYes-5}:{nYes+5}] = {y[nYes-5:nYes+5]}')
 
@@ -860,7 +924,14 @@ if __name__ == "__main__":
 
     # record weights during each training iteration
     # Create a neural network model
-    callback = weights_visualization_callback(num_of_layers)
+    weights_visualization = weights_visualization_callback(num_of_layers)
+    defined_callbacks = weights_visualization
+
+    if args.metric_recompute > 0:
+        # Create the custom callback instance
+        recompute_metrics = RecomputeTrainingMetrics(X_train, y_train, args.metric_recompute)
+        defined_callbacks = [ recompute_metrics, weights_visualization ]  # the use of recompute_metrics slows down training  15% (batch 8), 45% (batch 32)
+
 
     ##
     ## Initialize Model
@@ -888,10 +959,10 @@ if __name__ == "__main__":
     if X_test is not None:
         history = model.fit(X_train, y_train, sample_weight = w_train, epochs=epochs, batch_size=batch_size,
                             validation_data=(X_test, y_test, w_test),
-                            callbacks=callback, shuffle=True)   # by Default shuffle=True
+                            callbacks=defined_callbacks, shuffle=True)   # by Default shuffle=True
     else:
         history = model.fit(X_train, y_train, sample_weight = w_train, epochs=epochs, batch_size=batch_size,
-                            callbacks=callback, shuffle=True)   # by Default shuffle=True
+                            callbacks=defined_callbacks, shuffle=True)   # by Default shuffle=True
     training_time = timeit.default_timer() - training_start_time
     print(f"NN training took {training_time:.2f} seconds")
     print('=' * 70)
@@ -953,7 +1024,7 @@ if __name__ == "__main__":
 
 
     # visualizing weights
-    weights_history = callback.get_weights()
+    weights_history = weights_visualization.get_weights()
     weights_visualizer = weights_history_visualizer(weights_history, mode='2d')
     weights_visualizer.visualize(interval=10, frametime=200)
     # weights_visualizer.save('layer_visualization_8OM1.mp4')
