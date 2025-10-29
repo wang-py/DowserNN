@@ -48,8 +48,11 @@ parser.add_argument('-b', '--balance_y_no', type=float, default=1.0)
 parser.add_argument('-r', '--restart', type=str)
 parser.add_argument('-s', '--batch_size', type=int, default=32)
 parser.add_argument('-e', '--epochs', type=int, default=100)
+parser.add_argument('-l', '--learning_rate', type=float, default=0.001)
 parser.add_argument('-i', '--sub_water_file', type=str)
 parser.add_argument('-m', '--metric_recompute', type=int, default=0)
+parser.add_argument('-a', '--adapt_lr', type=int, default=0)
+parser.add_argument('-z', '--optimizer', type=str, default='Adam')
 
 # make sure results are reproducible
 seed_val = 1029
@@ -720,7 +723,7 @@ class RecomputeTrainingMetrics(tf.keras.callbacks.Callback):
               f"Recomputed training loss: {recomputed_train_loss:.4f}")
 
 def build_NN(num_of_layers: int, N: int, input_dim: int, hidden_dim: int,
-             learning_rate: float):
+            optimizer_name: str, learning_rate: float):
     """
     function that builds the neural network
     ----------------------------------------------------------------------------
@@ -773,12 +776,16 @@ def build_NN(num_of_layers: int, N: int, input_dim: int, hidden_dim: int,
         i += 1
     model.add(Dense(2, activation="softmax"))
 
+    config = {'class_name': optimizer_name, 'config': {'learning_rate': learning_rate}}
+    optimizer = tf.keras.optimizers.get(config)
+    print(f"Use Optimizer: \"{type(optimizer).__name__}\"")
+    
     # Compile the model
     #model.compile(optimizer='rmsprop', loss='mse', metrics=['mae'], weighted_metrics=[])
     #model.compile(optimizer='rmsprop', loss='mse', metrics=['accuracy'], weighted_metrics=[])
     #model.compile(optimizer=Adam(learning_rate=learning_rate), loss='mse', metrics=['mae'])
-    model.compile(optimizer=Adam(learning_rate=learning_rate),
-                  loss="binary_crossentropy", metrics=['accuracy',acc_p(),acc_n()], weighted_metrics=[])   # weighted_metrics=['binary_crossentropy']
+    model.compile(optimizer=optimizer, loss="binary_crossentropy",
+                  metrics=['accuracy',acc_p(),acc_n()], weighted_metrics=[])   # weighted_metrics=['binary_crossentropy']
     # USE custom metrics definition via Class: acc_p(),acc_n() because the functions: 'acc_yes', 'acc_no' are 20% wrong at batch_size < 8.
     # all three metrics=['Accuracy','Precision','Recall', 'BinaryAccuracy', f1_score] show the same values, only 'AUC' value is independent
     # custom metrics examples: https://medium.com/analytics-vidhya/custom-metrics-for-keras-tensorflow-ae7036654e05
@@ -787,6 +794,35 @@ def build_NN(num_of_layers: int, N: int, input_dim: int, hidden_dim: int,
     model.summary()
     return model
 
+def restart_NN(model_pth, optimizer_name, learning_rate):
+    f = open(model_pth, 'r')
+    f.close()
+    try:
+        model = tf.keras.models.load_model(model_pth, {'acc_p': acc_p, 'acc_n': acc_n})
+        model.summary()
+    except:
+        print(f"Error: Cannot load the model {model_pth}.\nCheck keras-format compatibility.")
+        exit()
+
+    print(f'In the loaded model:')
+    set_optimizer = model.optimizer
+    if optimizer_name != type(model.optimizer).__name__:
+        print(f"    - replace the model Optimizer \"{type(model.optimizer).__name__}\" --> \"{optimizer_name}\"")
+        config = {'class_name': optimizer_name, 'config': {'learning_rate': learning_rate}}
+        set_optimizer = tf.keras.optimizers.get(config)
+
+    # Recompile the model if changed optimizer, loss, metrics or trainable property of layers for fine-tuning.
+    model.compile(optimizer=set_optimizer, loss="binary_crossentropy",
+                  metrics=['accuracy',acc_p(),acc_n()], weighted_metrics=[])   # weighted_metrics=['binary_crossentropy']
+    print(f"    - set model Optimizer: \"{type(model.optimizer).__name__}\"")
+    print(f"    - recompile the model")
+    # Set learning_rate. Fix TF ver compatibility issue:
+    #    https://stackoverflow.com/questions/79547515/attributeerror-when-updating-learning-rate-in-keras-using-k-set-value
+    # Use function assign() instead of set_value()
+    # tf.keras.backend.set_value(model.optimizer.learning_rate, learning_rate)
+    model.optimizer.learning_rate.assign(learning_rate)   # lr should be set after model.compile, otherwise lr is not preserved
+    print('    - set learning_rate:',str(model.optimizer.learning_rate.numpy()).rstrip('0').rstrip('.')) # rstrip '0's, then rstrip '.' if it exists
+    return model
 
 def save_model(model, output_filename: str):
     """
@@ -813,8 +849,10 @@ if __name__ == "__main__":
     testing_pdb = args.validate_pdb
     testing_percentage = args.test_percentage
     balance_y_no = args.balance_y_no
+    optimizer_name = args.optimizer
     epochs = args.epochs
     batch_size = args.batch_size
+    learning_rate = args.learning_rate
     model_filename = args.output_filename
     X_file = training_pdb + "_CI_X.npy"
     y_file = training_pdb + "_CI_y.npy"
@@ -928,34 +966,37 @@ if __name__ == "__main__":
 
     # record weights during each training iteration
     # Create a neural network model
+    defined_callbacks =[]
     weights_visualization = weights_visualization_callback(num_of_layers)
-    defined_callbacks = weights_visualization
+    defined_callbacks.append(weights_visualization)
 
     if args.metric_recompute > 0:
         # Create the custom callback instance
         recompute_metrics = RecomputeTrainingMetrics(X_train, y_train, args.metric_recompute)
-        defined_callbacks = [ recompute_metrics, weights_visualization ]  # the use of recompute_metrics slows down training  15% (batch 8), 45% (batch 32)
+        defined_callbacks.append(recompute_metrics)  # the use of recompute_metrics slows down training  15% (batch 8), 45% (batch 32)
 
+    # Use adaptive learning_rate
+    if args.adapt_lr > 0:
+        adaptive_lr = tf.keras.callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.9, patience=args.adapt_lr, min_lr=0.00001)
+        defined_callbacks.append(adaptive_lr)
 
     ##
     ## Initialize Model
     ##
     print('=' * 65)
-    if args.restart is None:
+    if not args.restart:
         print(f"\nCreating a new model:")
         print(f"Layers={num_of_layers}, Layer_dim={hidden_dim}, TrainData_dim={len(y_train)}.\n")
-        model = build_NN(num_of_layers, N, input_dim, hidden_dim, learning_rate=0.001)
-    else:
+        model = build_NN(num_of_layers, N, input_dim, hidden_dim, optimizer_name, learning_rate)
+    if args.restart:
         model_pth = args.restart
         print(f"\nRestarting training from the model:\n    \"{model_pth}\"\n")
-        f = open(model_pth, 'r')
-        f.close()
-        try:
-            model = tf.keras.models.load_model(model_pth)
-            model.summary()
-        except:
-            print(f"Error: Cannot load the model {model_pth}.\nCheck keras-format compatibility.")
-            exit()
+        model = restart_NN(model_pth, optimizer_name, learning_rate)
+
+
+    print(f'\nStart Training ...')
+    print('=' * 65)
+
     ##
     ## Train the model
     ##
@@ -970,6 +1011,10 @@ if __name__ == "__main__":
     training_time = timeit.default_timer() - training_start_time
     print(f"NN training took {training_time:.2f} seconds")
     print('=' * 70)
+
+    ##
+    ## Analyze and Save trained model
+    ##
 
     # save model
     if model_filename is None:
