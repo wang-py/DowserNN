@@ -1639,6 +1639,8 @@ parser.add_argument('-d', '--descriptor_type', required=False, default='Z-matrix
 parser.add_argument('-b', '--balance_data', type=bool, default=True, help='Balance yes/no samples by striding no-water-sites')
 
 if __name__ == '__main__':
+    print('Command:\n\npython'," ".join(sys.argv))    # print out the command with all arguments
+    print('-' * 70)
     # Generate training and validation data
     try:
         args = parser.parse_args()

@@ -1,6 +1,7 @@
 import numpy as np
 import random
 import os
+import sys
 print('-' * 80)
 from keras.models import Sequential
 from keras.layers import Dense
@@ -867,6 +868,8 @@ if __name__ == "__main__":
     num_of_layers = 1
     hidden_dim = 4
 
+    print('Command:\n\npython'," ".join(sys.argv))    # print out the command with all arguments
+    print('-' * 70)
     # Load training and validation data
     args = parser.parse_args()
     training_pdb = args.train_pdb
