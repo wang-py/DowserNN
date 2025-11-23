@@ -535,7 +535,8 @@ if __name__ == '__main__':
     except IndexError:
         print("Usage: python pdb_input_processing.py input_pdb input_cavities")
         exit()
-    pdb_name = os.path.basename(input_pdb).split('.')[0]
+    basename = os.path.basename(input_pdb)
+    pdb_name = os.path.splitext(basename)[0]
     atom_info = read_pdb(input_pdb)
     water_data, env_water_data, protein_data = format_atom_info_for_training(atom_info)
     water_data_original, protein_data_original = format_atom_info_for_analysis(atom_info)
