@@ -1278,7 +1278,7 @@ def draw_distance_histogram(values, nbins, Title, low_val_mark=2.3, high_val_mar
     # Display the plot
     plt.show() 
 
-def check_water_enviroment(waters, protein, cutoff_clash, Nmax = 1, pdb_idx_shift = 0):
+def check_water_enviroment(waters, env_waters, protein, cutoff_clash, Nmax = 1, pdb_idx_shift = 0):
     """
     Check water clashes with protein atoms (dist < cutoff_clash)
     ----------------------------------------------------------------------------
@@ -1371,7 +1371,57 @@ def check_water_enviroment(waters, protein, cutoff_clash, Nmax = 1, pdb_idx_shif
     dist_sorted = np.sort(dist_P)
     print(f'{dist_sorted[0:10]}')
 
+    ## Add Water sites outside cutoff for drawing W-P distance distribution
+    if len(sites_no_P) > 0:
+        dist_P = np.concatenate( (dist_P, [cutoff + 0.1] * len(sites_no_P) ))   # Put sites outside cutoff at the constant dist [cutoff + 0.1] to draw histogram
     draw_distance_histogram(dist_P, 30, 'Distribution of Protein-Water Distances', cutoff_clash, cutoff_HB)
+
+    ##
+    ## Check Water-water Distances
+    ##
+    all_waters = waters
+    if len(env_waters) > 0:
+        all_waters = np.concatenate( (waters, env_waters), axis=0)
+    dist_W = []
+    w_water_ok = []
+    w_water_clash = []
+    sites_no_W = []
+    sites_clash_W =[]
+    idx_no_W = []
+    idx_clash_W =[]
+    for i in range(W):
+        W_i = waters[i]
+        closest_atoms_W       = atoms_within_cutoff(W_i,             all_waters, cutoff)
+        closest_atoms_clash_W = atoms_within_cutoff(W_i, closest_atoms_W[:,:-1], cutoff_clash)
+
+        if len(closest_atoms_W) == 0:     # Only Water itself
+            sites_no_W.append(waters[i,-3:])
+            idx_no_W.append(i + pdb_idx_shift)
+            #dist_W.append(cutoff + 0.1) # distance bayond cutoff, then assume dist (cutoff + 0.2) for distribution graph
+        else:
+            closest_atoms_W = closest_atoms_W[np.argsort(closest_atoms_W[:,-1])] # SORT BY DISTANCE idx=[-1]
+            dist_W.append(closest_atoms_W[0,-1]) # idx=0 closest atom because closest_atoms is ordered array
+
+        if len(closest_atoms_clash_W) > 0:
+            sites_clash_W.append(waters[i,-3:])
+            idx_clash_W.append(i + pdb_idx_shift)
+            w_water_clash.append(waters[i])
+        else:
+            w_water_ok.append(waters[i])
+    
+    if len(w_water_clash) > 0:
+        nprint = len(w_water_clash)
+        print('-------------')
+        print(f'Found {nprint} water sites with W-W clash within cutoff_clash = {cutoff_clash}')
+        if nprint > maxprint: nprint = maxprint
+        print(f'Indecies of first {nprint} sites with W-W clash within cutoff_clash = {cutoff_clash}:', idx_clash_P[:nprint])
+        print('NOTE: water_OK is defined by Water-Protein distance only, W-W clash does not affect the selection.')
+        
+    ## Add Water sites outside cutoff for drawing W-W distance distribution
+    if len(sites_no_W) > 0:
+        dist_W = np.concatenate( (dist_W, [cutoff + 0.1] * len(sites_no_W) ))   # Put sites outside cutoff at the constant dist [cutoff + 0.1] to draw histogram
+    draw_distance_histogram(dist_W, 30, 'Distribution of Water-Water Distances', cutoff_clash, cutoff_HB)
+
     return np.array(water_ok), np.array(sites_protein_wat), np.array(water_clash)
 
 def generate_no_X_clash(check_title, waters, protein, cutoff_clash, n = 10, pdb_idx_shift = 0):
@@ -1567,7 +1617,7 @@ def read_pdb_sub(input_pdb):
             if subunit == 'L':
                 protein_sub.append(one_data)
 
-    return np.array(water_data), np.array(protein_data), np.array(protein_sub)
+    return np.array(water_data), np.array(env_water_data), np.array(protein_data), np.array(protein_sub)
 
 
 def list_sub_water(within_r, protein_sub, water_all):
@@ -1642,6 +1692,9 @@ def print_arr_nByRow(arr, nByRow = 7, nprec=4):
         print(formatted_str)
 
 def check_conserved_components(arr2d,arrname='arr2d'):
+    if len(arr2d) == 0:
+        print(f'\nWARNING in check_conserved_components: {arrname} is zero-size array. No conserved components.\n')
+        return
     # Reduce along columns (axis=0)
     min_val = np.min(arr2d, axis=0)
     max_val = np.max(arr2d, axis=0)
@@ -1677,9 +1730,10 @@ if __name__ == '__main__':
         print("Usage: python pdb2descriptors.py -p input_pdb -c input_cavities")
         exit()
 
-    pdb_name = os.path.basename(input_pdb).split('.')[0]
+    basename = os.path.basename(input_pdb)
+    pdb_name = os.path.splitext(basename)[0]
     # water_data, env_water_data, protein_data = read_pdb(input_pdb)
-    water_data, protein_data, protein_sub = read_pdb_sub(input_pdb)
+    water_data, env_water_data, protein_data, protein_sub = read_pdb_sub(input_pdb)
     
     cavities_data = read_cavities(input_cavities)
     #if hasattr(args, 'descriptor_type') and args.descriptor_type: descriptor = args.descriptor_type
@@ -1687,9 +1741,9 @@ if __name__ == '__main__':
     print(f'Using descriptor type  = \"{descriptor}\"')
     # print(atom_types)
     total_data = np.append(water_data, protein_data, axis=0)
-    # if len(env_water_data) > 0:
-    #     total_data = np.concatenate( (water_data, env_water_data,  protein_data), axis=0)
-    print(f'PDB includes {len(water_data)} water, {len(protein_data)} all protein and {len(protein_sub)} protein L-sub-unit atoms.')
+    if len(env_water_data) > 0:
+        total_data = np.concatenate( (water_data, env_water_data,  protein_data), axis=0)
+    print(f'PDB includes {len(water_data)} water, {len(env_water_data)} env-water, {len(protein_data)} all protein and {len(protein_sub)} protein L-sub-unit atoms.')
 
     print("Generating training data...")
     starting_time = timeit.default_timer()
@@ -1698,7 +1752,7 @@ if __name__ == '__main__':
     ## Generate Water/noWater Sites
     ##
     cutoff_clash = 2.3
-    water_OK, sites_prot_wat, water_clash = check_water_enviroment(water_data, protein_data, cutoff_clash, 1)
+    water_OK, sites_prot_wat, water_clash = check_water_enviroment(water_data, env_water_data, protein_data, cutoff_clash, 1)
     #training_no_X_clash, water_OK = generate_no_X_clash("water", water_data, protein_data, 2.3)
 
     print(f'number of generated sites between protein and water atoms ({cutoff_clash-0.2:.1f}A): %d' % len(sites_prot_wat))
