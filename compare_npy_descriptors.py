@@ -33,18 +33,22 @@ if __name__ == "__main__":
         print(f'FALSE: two files have different number of sites:  {N} sites in X_file1 and {len(X2)} sites in X_file2.')
         exit()
 
+    np.set_printoptions(precision=16) # Set prescision=16 to print up to the last double-precision digit
     diff_X2_X1 = X2 - X1
 
-    if np.all(diff_X2_X1 == 0.0):
-        print(f'TRUE: Descriptors in both files are identical')
+    # Define a small tolerance value
+    tolerance = 1e-14                  # Set tolerance = 1e-15 to detect differences up to the last double-precision digit
+    # Check if all elements are within the tolerance of zero: np.allclose
+    if np.allclose( diff_X2_X1, 0.0, atol=tolerance):
+        print(f'TRUE: Descriptors in both files are identical within tolerance {tolerance}')
     else:
-        print(f'FALSE: both files have same number of sites {N} but descriptors are different.')
+        print(f'FALSE: both files have same number of sites {N} but descriptors are different within tolerance {tolerance}.')
         print(diff_X2_X1[0,:])
         print(diff_X2_X1[N-1,:])
         row_indices, col_indices = np.nonzero(diff_X2_X1)
-        print("Row indices:", row_indices[:10])
-        print("Column indices:", col_indices[:10])
-
+        print(f'Num of non-zero elements: {len(row_indices)}, Row indices:{row_indices[:10]}')
+        print(f"Num of non-zero elements: {len(col_indices)}, Column indices:", col_indices[:10])
+        print(diff_X2_X1[row_indices[:50],col_indices[:50]])
 
 
 
