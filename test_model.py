@@ -38,7 +38,7 @@ def plot_model_accuracy(accuracy_values, figtitle=None, sorted_val=True):
     ax.bar(np.arange(num_of_water), accuracy_values)
     ax.axhline(accuracy_threshold, color='k', linestyle='--',
                label=f'accuracy threshold = {accuracy_threshold}\n' +
-               f'% water above threshold: {percent_above_threshold:.0%}')
+               f'% water above threshold: {percent_above_threshold:.1%}')
     ax.set_xlabel("index")
     ax.set_ylabel("confidence")
     ax.legend()
@@ -135,7 +135,17 @@ def get_dowser_energies(water_pdb):
 def get_bfactors(pdb):
     with open(pdb, 'r') as records:
         atoms = records.readlines()
-        bfactors = [float(a[60:67]) for a in atoms]
+        # PDB Format: https://cupnet.net/pdb-format/
+        bfactors = [float(a[60:67]) for a in atoms if ( (a[17:20] =='HOH') and (a[0:4] =='ATOM') )]  # Take values for (resnm HOH and ATOM) records only.
+        # bfactors = []
+        # for a in atoms:
+        #     try:
+        #        bfac = float(a[60:67])
+        #        bfactors.append(bfac)
+        #     except ValueError:
+        #        print (f'rec:{a}')
+        #        print(f'ERROR: the B-factor field (61:68) in PDB cannot be converted to float')
+        #        exit()
     return np.array(bfactors)
 
 def get_records_bfac(pdb):
@@ -150,8 +160,9 @@ def savepdb_new_bfac(pdb,values,val_suff):
     with open(pdb, 'r') as atoms:
         records = atoms.readlines()
     nrec = len(records)
-    if (nrec != len(values)):
-        print(f"Error in replace_bfac: the number of new b-factor values ({len(values)}) differs from number of records ({nrec}) in {pdb}\nExit")
+    nrec_HOH = sum(1 for rec in records if ( (rec[17:20] =='HOH') and (rec[0:4] =='ATOM')) )
+    if (nrec_HOH != len(values)):
+        print(f"Error in replace_bfac: the number of new b-factor values ({len(values)}) differs from number of HOH records ({nrec_HOH}) in {pdb}\nExit")
         exit()
     abs_path = os.path.abspath(args.water_pdb)
     path_wo_ext, _ = os.path.splitext(abs_path) # Split the path into root and extension
@@ -162,11 +173,47 @@ def savepdb_new_bfac(pdb,values,val_suff):
         print(f"Error: cannot open file for writing {new_pdb}\nExit")
         exit()
 
+    # REPLACE B-FAC ONLY FOR HOH ATOMS
+    iw = 0
     for i in range(nrec):
-        records[i] = "{}{:6.2f}{}".format(records[i][:60], values[i], records[i][67:])  # PDB format https://cupnet.net/pdb-format/
+        if ( (records[i][17:20] =='HOH') and (records[i][0:4] =='ATOM') ):
+            records[i] = "{}{:6.2f}{}".format(records[i][:60], values[iw], records[i][67:])  # PDB format https://cupnet.net/pdb-format/
+            iw += 1
     f.writelines(records)                    # Read lines with "\n" at the end
     f.close()
 
+import tensorflow.keras.backend as K
+class acc_p(tf.keras.metrics.Metric):
+    def __init__(self, name='acc_p', **kwargs):
+        super().__init__(name=name, **kwargs)
+        self.total_correct = self.add_weight(name='tc', initializer='zeros')
+        self.total_samples = self.add_weight(name='ts', initializer='zeros')
+    def update_state(self, y_true, y_pred, sample_weight=None):
+        num_samples   = K.sum(K.round(K.clip(y_true         , 0, 1)), axis = 0)[0]
+        num_predicted = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)), axis = 0)[0]
+        self.total_correct.assign_add(num_predicted)
+        self.total_samples.assign_add(num_samples)
+    def result(self):
+        return self.total_correct / self.total_samples
+    def reset_state(self):
+        self.total_correct.assign(0.)
+        self.total_samples.assign(0.)
+
+class acc_n(tf.keras.metrics.Metric):
+    def __init__(self, name='acc_n', **kwargs):
+        super().__init__(name=name, **kwargs)
+        self.total_correct = self.add_weight(name='tc', initializer='zeros')
+        self.total_samples = self.add_weight(name='ts', initializer='zeros')
+    def update_state(self, y_true, y_pred, sample_weight=None):
+        num_samples   = K.sum(K.round(K.clip(y_true         , 0, 1)), axis = 0)[1]
+        num_predicted = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)), axis = 0)[1]
+        self.total_correct.assign_add(num_predicted)
+        self.total_samples.assign_add(num_samples)
+    def result(self):
+        return self.total_correct / self.total_samples
+    def reset_state(self):
+        self.total_correct.assign(0.)
+        self.total_samples.assign(0.)
 
 if __name__ == "__main__":
     # Generate training and validation data
@@ -187,7 +234,7 @@ if __name__ == "__main__":
         f = open(args.model, 'r')
         f.close()
         from keras.models import load_model
-        model = load_model(args.model)
+        model = load_model(args.model, {'acc_p': acc_p, 'acc_n': acc_n})
         model.summary()
     except ValueError:
         print("No exising model found")
@@ -197,11 +244,16 @@ if __name__ == "__main__":
     accuracy_values_yes = get_model_accuracy(model,
                                              X_validate_yes, y_validate_yes)
     # test with new data
-    test_loss, accuracy = model.evaluate(X_validate_yes, y_validate_yes)
-    print(f"test loss: {test_loss}")  # , test accuracy: {accuracy:.2%}")
+    # test with new data
+    loss, accuracy, acc_p, acc_n = model.evaluate(X_validate_yes, y_validate_yes)
+    print(f"loss: {loss:.4f}")  # , test accuracy: {accuracy:.2%}")
+    print(f"accuracy: {accuracy:.2%}")  # , test accuracy: {accuracy:.2%}")
+    print(f"acc_p: {acc_p:.2%}")  # , test accuracy: {accuracy:.2%}")
+    #print(f"acc_n: {acc_n:.2%}")  # , test accuracy: {accuracy:.2%}")
 
     if args.water_pdb:
         bfactors = get_bfactors(args.water_pdb)
+        print(f'n_bfac = {len(bfactors)}, n_acc = {len(accuracy_values_yes)}')
         acc_and_bfactors = np.c_[accuracy_values_yes, bfactors]
         plot_water_data(acc_and_bfactors, sorted_by=args.sort_key)
         savepdb_new_bfac(args.water_pdb,accuracy_values_yes * 100,'acc')  # Save pdb with accuracies in position of b-factors
