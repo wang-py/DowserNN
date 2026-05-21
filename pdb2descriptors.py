@@ -79,7 +79,7 @@ def find_n_nearest_atoms(water, atoms, n):
     Number of closest atoms
     ----------------------------------------------------------------------------
     Returns:
-    n_nearest_atoms_relative_xyz: n x 8
+    n_nearest_atoms_relative_points: n x 8
     |A|A|R|R|r|r|r|d|
     reformatted information from n nearest water molecules
     """
@@ -89,15 +89,27 @@ def find_n_nearest_atoms(water, atoms, n):
     search_range = 15
     atoms_within_range = atoms_with_dist[np.where(atoms_with_dist[:, -1] <
                                                   search_range)]
-    if atoms_within_range.shape[0] >= n:
-        atoms_sorted = atoms_within_range[atoms_within_range[:, -1].argsort()]
-    # if there are not enough atoms within range
-    else:
-        atoms_within_range = atoms_with_dist[np.where(atoms_with_dist[:, -1] <
-                                                      search_range * 2)]
+
+    if atoms_within_range.shape[0] < n+1: #  !!! The closest atom is itself (dist=0), hense search for (n+1) neighbors
+        print(f'ERROR: {atoms_within_range.shape[0]} atoms found within {search_range}A cutoff for site {water[-3:]} is smaller than {n} required for descriptors.')
+        print(f'Make sure that 1) water sites, or 2) cavity grid points are not beyond {search_range}A from input PDB atoms.')
+        #exit()
+        # if there are not enough atoms within the range
+        # Option-1: Take remaining atoms from the first n+1 atoms which are on any distance
+        atoms_within_range = np.append(atoms_within_range, atoms_with_dist[atoms_within_range.shape[0]:n+1], axis=0)
+        # Option-2: double the range and search again
+        # atoms_within_range = atoms_with_dist[np.where(atoms_with_dist[:, -1] < search_range * 2)]
+        
+    atoms_sorted = atoms_within_range[atoms_within_range[:, -1].argsort()]
     n_nearest_atoms = atoms_sorted[1:n + 1]
-    if atoms_sorted[0,-1] > 0.0:   # !!! If nearest atoms are searched not for atoms
+    if atoms_sorted[0,-1] > 0.0:   # !!! The closest atom is itself (dist=0) unless nearest atoms are searched for non-atom sites
             n_nearest_atoms = atoms_sorted[0:n]
+
+    ## if n_nearest_atoms.shape[0] < n:
+    ##     print(f'ERROR: {n_nearest_atoms.shape[0]} atoms found within {search_range}A cutoff for site {water[-3:]} is smaller than {n} required for descriptors.')
+    ##     print(f'Make sure that 1) water sites, or 2) cavity grid points are not beyond {search_range}A from input PDB atoms.')
+    ##     exit()
+
     return n_nearest_atoms
 
 
@@ -167,7 +179,7 @@ def atoms_within_cutoff(water, atoms, cutoff):
     Number of closest atoms
     ----------------------------------------------------------------------------
     Returns:
-    n_nearest_atoms_relative_xyz: n x 8
+    n_nearest_atoms_relative_points: n x 8
     |A|A|R|R|r|r|r|d|
     reformatted information from n nearest water molecules
     """
@@ -485,7 +497,7 @@ def check_closest_env_distances(check_title,waters, atoms, pdb_idx_shift = 0):
         print('-------------')
         print(f'Found {nprint} positions of {check_title} with noEnv within cutoff_P = {cutoff_P}')
         if nprint > 30: nprint = 30
-        print(f'Indecies of first 30 sites with noEnv within cutoff_P = {cutoff_P}:', idx_no_P[:nprint])
+        print(f'Indices of first 30 sites with noEnv within cutoff_P = {cutoff_P}:', idx_no_P[:nprint])
         #print(f'points_no_P = {points_no_P[0:nprint]}')
 
         dump_pdb(np.array(points_no_P), f'Data Points {check_title} with noEnv, cut' + str(cutoff_P), title + '_noEnv_cut' + str(cutoff_P) + '.pdb', idx_no_P)
@@ -495,7 +507,7 @@ def check_closest_env_distances(check_title,waters, atoms, pdb_idx_shift = 0):
         print('-------------')
         print(f'Found {nprint} positions of {check_title} with noEnv within cutoff_W = {cutoff_W}')
         if nprint > 30: nprint = 30
-        print(f'Indecies of first 30 sites with noEnv within cutoff_W = {cutoff_W}:', idx_no_W[:nprint])
+        print(f'Indices of first 30 sites with noEnv within cutoff_W = {cutoff_W}:', idx_no_W[:nprint])
         #print(f'points_no_W = {points_no_W[0:nprint]}')
 
     if len(points_1_W) > 0:
@@ -504,7 +516,7 @@ def check_closest_env_distances(check_title,waters, atoms, pdb_idx_shift = 0):
         print(f'Found {nprint} positions of {check_title} with only 1 Env atom within cutoff_W = {cutoff_W}')
         print(f'These data points will have ZERO angular descriptor coords corresponding to tetha0=Pi because [1+cos(0 - Pi)] = 0.')
         if nprint > 30: nprint = 30
-        print(f'Indecies of first 30 sites with only 1 Env atom within cutoff_W = {cutoff_W}:', idx_1_W[:nprint])
+        print(f'Indices of first 30 sites with only 1 Env atom within cutoff_W = {cutoff_W}:', idx_1_W[:nprint])
         #print(f'points_1_W = {points_1_W[0:nprint]}')
 
         dump_pdb(np.array(points_1_W), f'Data Points {check_title} with only 1 Env atom, cut' + str(cutoff_W), title + '_1Env_cut' + str(cutoff_W) + '.pdb', idx_1_W)
@@ -513,7 +525,7 @@ def check_closest_env_distances(check_title,waters, atoms, pdb_idx_shift = 0):
         print('-------------')
         print(f'Found {nprint} positions of {check_title} with Env clash within cutoff_clash = {cutoff_clash}')
         if nprint > 30: nprint = 30
-        print(f'Indecies of first 30 sites with Env clash within cutoff_clash = {cutoff_clash}:', idx_clash[:nprint])
+        print(f'Indices of first 30 sites with Env clash within cutoff_clash = {cutoff_clash}:', idx_clash[:nprint])
         #print(f'points_clash = {points_clash[0:nprint]}')
 
         dump_pdb(np.array(points_clash),f'Data Points {check_title} with Env clash, cut' + str(cutoff_clash), title + '_clash_cut' + str(cutoff_clash) + '.pdb', idx_clash)
@@ -556,7 +568,7 @@ def checkZERO_AEV_descriptors(siteTitle, training_X, pdb_idx_shift = 0):
         print(f'ERROR: Make sure that the sites were correctly generated.')
         nprint = NumZeroDescriptors
         if nprint > 30: nprint = 30
-        print('Indecies of first 30 sites with ZERO descriptor:', iZeroDescriptor[:nprint])
+        print('Indices of first 30 sites with ZERO descriptor:', iZeroDescriptor[:nprint])
 
 
     if NumZeroDescComponent > 0:
@@ -567,7 +579,7 @@ def checkZERO_AEV_descriptors(siteTitle, training_X, pdb_idx_shift = 0):
         print(f'ERROR: Otherwise, there might be some error. Make sure that the sites were correctly generated.')
         nprint = NumZeroDescComponent
         if nprint > 30: nprint = 30
-        print('Indecies of first 30 sites with ZERO AEV coordinates:', iZeroDescComponent[:nprint])
+        print('Indices of first 30 sites with ZERO AEV coordinates:', iZeroDescComponent[:nprint])
         print('-------------')
     return
 
@@ -611,7 +623,7 @@ def generate_AEV_descriptors_no_X(protein_atoms, water_atoms, cavities):
     Array of other atoms' information
 
     cavities: ndarray N x 3
-    Array of cavity points in xyz
+    Array of cavity points in points
 
     n: int
     Number of closest atoms
@@ -716,14 +728,14 @@ def noW_nearestN_cavity_grid(input_cavities, atoms, n):
     Array of other atoms' information
 
     cavities: ndarray N x 3
-    Array of cavity points in xyz
+    Array of cavity points in points
 
     n: int
     Number of closest atoms
     ----------------------------------------------------------------------------
     Returns:
     cavities: ndarray N x 3
-    Array of cavity points in xyz that have no W within n nearest atoms
+    Array of cavity points in points that have no W within n nearest atoms
     """
     cavities = read_cavities(input_cavities)
     C = cavities.shape[0]
@@ -755,11 +767,11 @@ def noW_cavity_grid(input_cavities, protein_atoms, water_atoms):
     Array of other atoms' information
 
     cavities: ndarray N x 3
-    Array of cavity points in xyz
+    Array of cavity points in points
     ----------------------------------------------------------------------------
     Returns:
     cavities: ndarray N x 3
-    Array of cavity points in xyz that satisfy 2 criteria cutoff_P and NOT cutoff_W
+    Array of cavity points in points that satisfy 2 criteria cutoff_P and NOT cutoff_W
     """
     cutoff_P = 3.3
     cutoff_W = 2.0
@@ -874,7 +886,7 @@ def search_no_water_sites(atoms, cavities, n, interval: int):
     Array of other atoms' information
 
     cavities: ndarray N x 3
-    Array of cavity points in xyz
+    Array of cavity points in points
 
     n: int
     Number of closest atoms
@@ -979,7 +991,7 @@ def search_close_no_water_sites(atoms, cavities, n, Nref: int, cutoff1, cutoff2,
     Array of other atoms' information
 
     cavities: ndarray N x 3
-    Array of cavity points in xyz
+    Array of cavity points in points
 
     n: int
     Number of closest atoms
@@ -1059,6 +1071,1061 @@ def search_close_no_water_sites(atoms, cavities, n, Nref: int, cutoff1, cutoff2,
     print(f'Number of generated cavity sites with NO water: {len(no_water_site)}')
     return np.array(no_water_site)
 
+
+def search_close_no_water_cav0(atoms, cavities, n, Nref: int, cutoff1, cutoff2, ratio1, ratio2):
+    """
+    Search for no water (within n closest atoms) sites in "cavities" points within cutoff
+    ----------------------------------------------------------------------------
+    atoms: ndarray N x 7
+    Array of other atoms' information
+
+    cavities: ndarray N x 3
+    Array of cavity points in points
+
+    n: int
+    Number of closest atoms
+
+    Nref: int
+    Reference number for striding sites within cuoff1. If Nref < 1 then all sites are used.
+
+    ratio1: in respect to Nref1 (number of strided sites within cutoff1)
+    Portion of the Nref1 for striding sites within cutoff2
+
+    ratio2: in respect to Nref1 (number of strided sites within cutoff1)
+    Portion of the Nref1 for striding sites out of cutoff2
+    ----------------------------------------------------------------------------
+    Returns:
+    training_X: P x n x 7
+    training X data
+    """
+    #cutoff1  = 3.5
+    #cutoff2  = 4.5
+    #ratio1 = 0.1
+    #ratio2 = 0.05
+    C = cavities.shape[0]
+    HOH_encoding = feature_encoder_residue(residue_types['HOH'])
+    closest_at_dist =[]
+
+    no_water0 = []    # sites in the range-0:            r <= cutoff1
+    no_water1 = []    # sites in the range-1: cutoff2 >= r > cutoff1
+    no_water2 = []    # sites in the range-2:            r > cutoff2
+    closest0_at_dist =[]    # closest atom distances in the range-0, -1 and -2
+    closest1_at_dist =[]
+    closest2_at_dist =[]
+    for cav in cavities:
+        for grd_point in cav:
+            n_nearest_atoms = find_n_nearest_atoms(grd_point, atoms, n)
+            HOH_check = n_nearest_atoms[:, 2:4] - HOH_encoding
+            if not np.any(HOH_check == 0.0):
+                closest_at_dist.append(n_nearest_atoms[0, -1])
+                if (n_nearest_atoms[0, -1] <= cutoff1 ):
+                    closest0_at_dist.append(n_nearest_atoms[0, -1])
+                    no_water0.append(grd_point)
+                else:
+                    if (n_nearest_atoms[0, -1] <= cutoff2 ):
+                        closest1_at_dist.append(n_nearest_atoms[0, -1])
+                        no_water1.append(grd_point)
+                    else:
+                        closest2_at_dist.append(n_nearest_atoms[0, -1])
+                        no_water2.append(grd_point)
+    #    print(f'cav_grid({i}) closest atom disdtance:{closest_at_dist[k]}')
+        #closest_at_dist.append(n_nearest_atoms[0, -1])
+        #if  n_nearest_atoms[0, -1] > 10.0: print(f'Distances to 10 nearest_atoms with closest_at_dist>10A: {n_nearest_atoms[:, -1]}')
+
+    num0 = len(no_water0)
+    num1 = len(no_water1)
+    num2 = len(no_water2)
+    print(f'Found {num0+num1+num2} no water sites (before balancing) out of total {C} cavity sites')
+    print(f'NO water sites before balancing: {num0}/{num1}/{num2} within {cutoff1}/{cutoff2}A and out of {cutoff2}A, respectively.')
+    draw_distance_histogram(closest_at_dist, 100, 'Distribution of ALL cavity no-water Point-Atom(P,W) Distances',  cutoff1, cutoff2)
+    draw_distance_histogram(closest0_at_dist, 30, 'Distribution of cavity no-water Point-Atom(P,W) Distances =< 3.5A', 2.3, 3.5)
+    #print(f'Distances to nearest_atoms : {closest_at_dist[:100]}')
+    
+    # Compose final (balanced) No-water sites from no_water0, no_water1 and no_water2
+    #interval = round( float(num0) / float(Nref) )   # striding interval
+    #Nref = num0 / interval if num0 / interval >= 1 else 1
+
+    no_water_site, closest_at_dist = stride_sites(no_water0, closest0_at_dist, Nref, 1.0, 'dist =< ' + str(cutoff1))
+    draw_distance_histogram(closest_at_dist, 30, 'Distribution of Balanced cavity no-water sites Distances =< '  + str(cutoff1), 2.3, 3.5)
+    
+    Nref1 = len(no_water_site)
+    no_water_site1, closest1_at_dist = stride_sites(no_water1, closest1_at_dist, Nref1, ratio1, 'dist =< ' + str(cutoff2))
+    draw_distance_histogram(closest1_at_dist, 30, 'Distribution of Balanced cavity no-water sites Distances =< '  + str(cutoff2), 2.3, 3.5)
+
+    no_water_site2, closest2_at_dist = stride_sites(no_water2, closest2_at_dist, Nref1, ratio2, 'dist > ' + str(cutoff2))
+    draw_distance_histogram(closest2_at_dist, 30, 'Distribution of Balanced cavity no-water sites Distances > '  + str(cutoff2), 2.3, 3.5)
+
+    no_water_site   = no_water_site   + no_water_site1   + no_water_site2
+    closest_at_dist = closest_at_dist + closest1_at_dist + closest2_at_dist
+    draw_distance_histogram(closest_at_dist, 100, 'Final Distribution of All Balanced cavity no-water sites Distances', cutoff1, cutoff2)
+    print(f'Number of generated cavity sites with NO water: {len(no_water_site)}')
+    return np.array(no_water_site)
+
+##
+##  Cavities and grid_spacing object
+##
+class Cav:
+    """
+    Class for a cavity object.
+
+    Extension (# of grid points) given by a tuple of
+    length 3. Default initialization with value "0".
+
+    USAGE: Grid(origin, extend, init=0)
+              extend: tuple:(x,y,z)  grid extension number of grid points
+                              in (x , y , z)
+              init:        :initialization value of grid point (standard=0)
+    """
+
+    def __init__(self, cavities=[], grid_spacing=0.0):
+        self.cavities = cavities
+        self.grid_spacing = grid_spacing
+
+    def count_points(self):
+        """
+        Count the total number of points and non-empty cavities.
+        """
+        num_cavs   = sum(1            for sublist in self.cavities if sublist.any())   # sublist.any() checks if at least one non-zero non-empty point
+        num_points = sum(len(sublist) for sublist in self.cavities if sublist.all())  # sublist.all() checks if all points are non-zero and non-empty
+        return num_points, num_cavs
+
+
+    def save_cavities(self, file_pth, header="",):
+        """
+        generate PDBStructure objects for the cavities
+        """
+        n_at = 1
+        pdb_lines = []
+        for i_cav, cav in enumerate(self.cavities):
+            if i_cav >= 9999:  # just in case that there are more than 9999 cavities
+                i_cav -= 9999
+
+            pdb_lines.append("REMARK")
+            pdb_lines.append(f"REMARK Cavity #{i_cav + 1} number of grid_points:{len(cav):>9d}")
+            for i, point in enumerate(cav):
+                resid = i_cav + 1
+                bfactor = "7.00"
+                atom = f"HETATM{n_at:5d}  XP  CAV X{resid:4d}     {point[0]:>7.3f} {point[1]:>7.3f} {point[2]:>7.3f}  1.00{bfactor:>6}"
+                pdb_lines.append(atom)
+                n_at += 1
+                if n_at > 99999:
+                    n_at -= 99999
+        pdb = "\n".join(pdb_lines) + "\n"
+
+        with open(file_pth, "w") as file:
+            file.write(header)
+            file.write(f"REMARK grid spacing:{str(self.grid_spacing):>7}\n")
+            file.write(pdb)
+            file.write("END\n")
+
+
+
+##
+##  CavitOmix Approach for masking grid points
+##
+class Grid:
+    """
+    Class for a grid object.
+
+    Extension (# of grid points) given by a tuple of
+    length 3. Default initialization with value "0".
+
+    USAGE: Grid(origin, extend, init=0)
+              extend: tuple:(x,y,z)  grid extension number of grid points
+                              in (x , y , z)
+              init:        :initialization value of grid point (standard=0)
+    """
+
+    def __init__(
+        self, origin=(0.0, 0.0, 0.0), extent=(50, 50, 50), d=0.7, init=0, dtype=np.int32):
+        self.nx, self.ny, self.nz = extent
+        self.extent = extent
+        self.origin = np.array(origin, dtype=np.float32)
+        self.d = d
+        self._grid = np.zeros(extent, dtype=dtype)
+        if init != 0:
+            self._grid = init
+
+    def get_subgrid(self, x0, y0, z0, x1, y1, z1):
+        """
+        Return a view of a sub-grid of the internal np.array
+        :param x0: start x-index
+        :param y0: start y-index
+        :param z0: start z-index
+        :param x1: end x-index
+        :param y1: end y-index
+        :param z1: end z-index
+        :return: reference to the sub-grid
+        """
+        return self._grid[x0:x1, y0:y1, z0:z1]
+    
+    def get_grid(self):
+        """
+        Return a view of the complete grid object
+        :return: reference to the internal np.array
+        """
+        return self._grid
+
+    def coordinates(self, index):
+        """
+        Return the cartesian coordinates of a grid point
+        :param index: indices (i, j, k), tuple, list, np.array
+        :return: np.array with cartesian coordinates
+        """
+        return self.origin + np.array(index, dtype=np.float32) * self.d
+    
+    def indices(self, coords):
+        """
+        Convert the cartesian coordinates of a grid point to grid indices
+        indices (i, j, k), tuple, list, np.array
+        :return: np.array with indices (i, j, k), tuple, list, np.array
+        """
+        return ( (coords - self.origin) / self.d ).astype(int)
+
+    def indices_3to1D(self, indices_3D):
+        """
+        Convert xyz grid indices (i, j, k) to a single 1D index
+        Convert triplet indicies to global idx = i*Ny*Nz + j*Nz + k
+        :return: np.array with 1D indices
+        """
+        return (indices_3D[:, 0] * self.ny + indices_3D[:, 1]) * self.nz + indices_3D[:, 2]
+
+    def indices_1to3D(self, indices_1D):
+        """
+        Convert a single 1D index to xyz grid indices (i, j, k)
+        :return: np.array with 1D indices
+        """
+        NyNz = self.ny * self.nz
+        i =  indices_1D // NyNz                    ## '//' - integer devision(without reminder);
+        j = (indices_1D // self.nz) % self.ny      ## '%'  - reminder after integer division
+        k =  indices_1D %  self.nz           
+        #print(f'ijk({idx}): {[i,j,k]}, z0={i*NyNz+j*Nz+k-1}, z1={i*NyNz+j*Nz+k+1}')
+        return np.column_stack((i, j, k))
+
+def setup_grid(coords, d_grid, cushion = 0):
+    """
+    Setup and initialize grid using atom coordinates
+    """
+    # min and max in cartesian coordinates
+    min_coords = coords.min(axis=0)
+    max_coords = coords.max(axis=0)
+    # min and max in grid coordinates
+    min_grid = np.floor((min_coords - cushion) / d_grid)
+    max_grid = np.ceil((max_coords + cushion) / d_grid)
+
+    origin = min_grid * d_grid
+    extent = (max_grid - min_grid + 1).astype(int)
+
+    return Grid(origin=origin, extent=extent, d=d_grid, init=0, dtype=np.int32)
+
+def mask_grid(grid, coords, radii, mask_flag):
+    """
+    Mask grid using atom coordinates and radii
+    """
+    # atom coordinates in grid units
+    grid_coords = (coords - grid.origin) / grid.d
+    # atom radii in grid units
+    grid_radii = (radii ) / grid.d
+    grid_r2 = grid_radii**2  # squared outer, soft radius
+
+    # origin and space-diagonal coordinates of the sub-grids around the atoms
+    sg_start = np.clip(
+        np.floor(grid_coords - grid_radii.reshape(-1, 1)).astype(int),
+        (0, 0, 0),
+        grid.extent,
+    )
+    sg_end = np.clip(
+        np.ceil(grid_coords + grid_radii.reshape(-1, 1)).astype(int) + 1,
+        (0, 0, 0),
+        grid.extent,
+    )
+
+    for i in range(grid_coords.shape[0]):  # loop over all atom coordinates
+        x_start, y_start, z_start = sg_start[i]
+        x_end, y_end, z_end = sg_end[i]
+        sub_grid = grid.get_subgrid(x_start, y_start, z_start, x_end, y_end, z_end)
+
+        x, y, z = np.ogrid[x_start:x_end, y_start:y_end, z_start:z_end]
+        dist = (
+              (x - grid_coords[i, 0]) ** 2
+            + (y - grid_coords[i, 1]) ** 2
+            + (z - grid_coords[i, 2]) ** 2
+        )
+
+        # grid points within the radius
+        mask_true = dist < grid_r2[i]
+        sub_grid[mask_true] = mask_flag
+
+def find_masked_cavities2(cavities, masked_grid, mask_value):
+    """
+    Find intersection of cavities in a masked grid using sets
+    """
+    masked_cavities = []  # list of cavity objects to be returned
+
+    d_grid = masked_grid.d  # get grid spacing
+    origin = masked_grid.origin  # get origin of the grid in cartesian coordinates
+    print(f'Getting grid')
+    start = timeit.default_timer()
+    grid = masked_grid.get_grid()  # get underlying grid array
+    stop = timeit.default_timer()
+    print(f"Time of masked_grid.get_grid(): {stop - start:.2f} sec.")
+    start = timeit.default_timer()
+    print(f'Identifying masked grid indicies')
+    # indices of the masked grid points
+    indices = np.argwhere(grid == mask_value)
+    del grid
+    stop = timeit.default_timer()
+    print(f"Time of np.argwhere(grid == mask_value): {stop - start:.2f} sec.")
+    start = timeit.default_timer()
+    ## array of indices grid points above threshold
+    #indices = np.argwhere(grid >= cutoff)
+    print(f'indices[:3]:{indices[:3]}]')
+
+    # Define a structured dtype where each row is one 'element'
+    # print(f'indices.dtype: {indices.dtype}, MemSize: {sys.getsizeof(indices)}')
+    # if indices.dtype == np.int64:
+    #     indices = indices.astype(np.uint16)   # or int16, np.uint16 if values fit
+    # print(f'indices.dtype: {indices.dtype}, MemSize: {sys.getsizeof(indices)}')
+    ind_array = np.array(indices, dtype=np.int32)          # or int64 if needed
+
+
+    # ind_set = {tuple(row) for row in indices}   # Mememory issue for grid 0.25 oin complex-I. Creates millions of temporary Python tuple objects.
+    #print(f'MemSize: {sys.getsizeof(ind_set)}')
+
+    print(f'Number of grid points with mask_value {mask_value}: {len(indices)}')
+
+    for i, cav_coords in enumerate(cavities):
+        if len(cav_coords) == 0:
+            print(f'ERROR: the cavity {i} is empty.')
+            continue
+        #cav_ind = masked_grid.indices(np.array(cav_coords))
+        #cav_set = {tuple(row) for row in cav_ind}
+        #in_cavity = ind_set.intersection(cav_set)
+        #ind_set.difference_update(in_cavity)
+
+        # Get cavity indices (assuming this returns a 2D array of shape M x 2)
+        cav_ind = masked_grid.indices(np.array(cav_coords))
+        cav_array = np.array(cav_ind, dtype=np.int32)
+        
+        if cav_array.size == 0:
+            continue
+        
+        # Find rows that appear in BOTH ind_array and cav_array (intersection)
+        # This is done by broadcasting comparison
+        # Result: boolean matrix of shape (N_points, M_points)
+        matches = np.all(ind_array[:, None] == cav_array[None, :], axis=-1)
+        
+        # Get indices of matching rows in the original ind_array
+        in_cavity_mask = np.any(matches, axis=1)          # True for rows that are in the cavity
+        
+        # Extract the coordinates that are in this cavity
+        in_cavity_coords = ind_array[in_cavity_mask]
+        
+        # Remove those points from ind_array for the next cavities
+        ind_array = ind_array[~in_cavity_mask]
+
+        if len(in_cavity_coords) > 0:
+            cav_intersec_coords = in_cavity_coords.astype(np.float32) * d_grid + origin
+            masked_cavities.append(cav_intersec_coords)
+        #masked_cavities.append(grid.coordinates(in_cavity))
+        if i<=50:
+            print(f'Number of points in the masked region for cavity {i} (total {len(cav_array)}): {len(in_cavity_coords)}')
+    print(f'Finished masking with mask_value {mask_value}.')
+# 
+    del ind_array
+    print(f'Memory clean up.')
+    return masked_cavities
+
+def find_masked_cavities1(cavities, masked_grid, mask_value):
+    """
+    Find intersection of cavities in a masked grid using sets
+    """
+    masked_cavities = []  # list of cavity objects to be returned
+
+    d_grid = masked_grid.d  # get grid spacing
+    origin = masked_grid.origin  # get origin of the grid in cartesian coordinates
+
+    start = timeit.default_timer()
+    grid = masked_grid.get_grid()  # get underlying grid array
+    stop = timeit.default_timer()
+    print(f"Time of masked_grid.get_grid(): {stop - start:.2f} sec.")
+    start = timeit.default_timer()
+    print(f'Identifying masked grid indicies')
+    # indices of the masked grid points
+    indices = np.argwhere(grid == mask_value)
+    del grid
+    stop = timeit.default_timer()
+    print(f"Time of np.argwhere(grid == mask_value): {stop - start:.2f} sec.")
+    start = timeit.default_timer()
+    ## array of indices grid points above threshold
+    #indices = np.argwhere(grid >= cutoff)
+
+    # set of those indices
+    ind_set = {tuple(row) for row in indices}
+    #ind_set = set(map(tuple, indices))
+    #ind_set = set(zip(indices[:, 0], indices[:, 1], indices[:, 2]))
+
+    stop = timeit.default_timer()
+    print(f"Time indices -> set(tuple(row)): {stop - start:.2f} sec.")
+    start = timeit.default_timer()
+
+    print(f'Number of grid points with mask_value {mask_value}: {len(ind_set)}')
+
+    for i, cav_coords in enumerate(cavities):
+        if len(cav_coords) == 0:
+            print(f'ERROR: the cavity {i} is empty.')
+            continue
+        cav_ind = masked_grid.indices(np.array(cav_coords))
+        cav_set = {tuple(row) for row in cav_ind}
+        # set of neighbours that qualify as cavity points
+        in_cavity = ind_set.intersection(cav_set)
+
+        # remove them from the set of indices
+        ind_set.difference_update(in_cavity)
+        
+        if len(in_cavity) > 0:
+            cav_intersec_coords = np.array(list(in_cavity)).astype(np.float32) * d_grid + origin    # 3D coordinates
+            masked_cavities.append(cav_intersec_coords)
+        #masked_cavities.append(grid.coordinates(in_cavity))
+        if i<=50:
+            print(f'Number of points in the masked region for cavity {i} (total {len(cav_set)}): {len(in_cavity)}')
+
+    stop = timeit.default_timer()
+    print(f"Time of for cav_coords in cavities: {stop - start:.2f} sec.")
+    print(f'Finished masking with mask_value {mask_value}.')
+    return masked_cavities
+
+def find_masked_cavities(cavities, masked_grid, mask_value, range_label):
+    """
+    Find intersection of cavities in a masked grid using sets
+    """
+    start0 = timeit.default_timer()
+    print(''); print('-' * 70)
+    print(f"Find masked cavities in the range {range_label}")
+
+    masked_cavities = []  # list of cavity objects to be returned
+
+    grid = masked_grid.get_grid()  # get underlying grid array
+
+    start = timeit.default_timer()
+    print(f'Identifying masked grid indicies')
+    indices_3D = np.argwhere(grid == mask_value)       # indices of the masked grid points
+    del grid
+    stop = timeit.default_timer()
+    print(f"Time of np.argwhere(grid == mask_value): {stop - start:.2f} sec.")
+
+    start = timeit.default_timer()
+    indices_1D = masked_grid.indices_3to1D(indices_3D)
+    del indices_3D
+    stop = timeit.default_timer()
+    print(f"Time of indices_3D -> indices_1D: {stop - start:.2f} sec.")
+    start = timeit.default_timer()
+
+    # set of those indices
+    ind_set = set(indices_1D.flatten())
+    #ind_set = {tuple(row) for row in indices}
+    #ind_set = set(map(tuple, indices))
+    #ind_set = set(zip(indices[:, 0], indices[:, 1], indices[:, 2]))
+    stop = timeit.default_timer()
+    print(f"Time of  set(indices_1D.flatten()): {stop - start:.2f} sec.")
+
+    start = timeit.default_timer()
+    print(f'Number of grid points with mask_value {mask_value}: {len(ind_set)}')
+
+    for i, cav_coords in enumerate(cavities):
+        if len(cav_coords) == 0:
+            print(f'ERROR: the cavity {i} is empty.')
+            continue
+        cav_ind = masked_grid.indices(np.array(cav_coords))
+        cav_ind_1D = masked_grid.indices_3to1D(cav_ind)
+        cav_set = set(cav_ind_1D.flatten())
+        # cav_set = {tuple(row) for row in cav_ind}
+        # set of neighbours that qualify as cavity points
+        in_cavity = ind_set.intersection(cav_set)
+
+        # remove them from the set of indices
+        ind_set.difference_update(in_cavity)
+        
+        if len(in_cavity) > 0:
+            cav_ind_3D = masked_grid.indices_1to3D(np.array(list(in_cavity)))
+            cav_intersec_coords = masked_grid.coordinates(cav_ind_3D)    # 3D coordinates
+            masked_cavities.append(cav_intersec_coords)
+        else:    # add empty list
+            masked_cavities.append(np.empty((0, 3), dtype=float))        # Correct empty 3D array)
+
+        if i<=50:
+            print(f'Number of points at the masked region in cavity #{i} (total {len(cav_set)}): {len(in_cavity)}')
+
+
+
+    print(f'Count of cavities in the range {range_label}: {sum(1 for sublist in masked_cavities if sublist.any())}, number of points: {sum(len(sublist) for sublist in masked_cavities if sublist.all() )}')
+
+    #  Save cavity points to pdb
+    masked_points = []
+    for sublist in masked_cavities:
+        masked_points.extend(sublist)
+    if    mask_value == 0: pdbnm = 'cavities_outR2.pdb'
+    elif  mask_value == 1: pdbnm = 'cavities_inR1.pdb'
+    elif  mask_value == 2: pdbnm = 'cavities_inR2-R1.pdb'
+    elif  mask_value == 9: pdbnm = 'cavities_nearWpdb.pdb'
+    else:                  pdbnm = 'cavities_unknown.pdb'
+    dump_pdb(np.array(masked_points),f'Grid Points in the range {range_label}', pdbnm)
+
+    stop = timeit.default_timer()
+    print(f"Time for finding cavities in the range {range_label}: {stop - start0:.2f} sec.")
+
+    return masked_cavities
+
+def find_remained_cavities(cavities, *sub_cavities, grid, range_label, pdbnm = None):
+    """
+    Find remainding cavities that are not included in sub_cavities
+    *sub_cavities - arbitrary number of sub-cavities defined previously within cavities
+    pdbnm (Optional) PDB file name for saving cavities, if None then PDB not saved
+    """
+    start0 = timeit.default_timer()
+    print(''); print('-' * 70)
+    print(f"Find cavities in the range {range_label} as a remainder from all masked ranges")
+    remained_cavities = []  # list of cavity objects to be returned
+    for i, row_tuple in enumerate(zip(cavities, *sub_cavities)):
+        comb_sub = np.concatenate(row_tuple[1:], axis=0)
+
+        # Convert xyz coordinates to integer (i,j,k) indices to insure precise comparison of rows in arrays
+        indices     = grid.indices(row_tuple[0])
+        indices_sub = grid.indices(comb_sub)
+        # Efficiently find rows in indices not in indices_sub
+        # 0. mask = (indices == indices_sub[:,None]).all(2).any(0)   # WORKS(!) https://stackoverflow.com/questions/71708091/is-there-an-equivalent-numpy-function-to-isin-that-works-row-based
+        # 1. View rows as structured void type (combines columns into one unit); 2. Use np.isin on the 1D view
+        mask = np.isin(indices.view(    np.dtype((np.void, indices.dtype.itemsize     * indices.shape[1]))),
+                       indices_sub.view(np.dtype((np.void, indices_sub.dtype.itemsize * indices_sub.shape[1]))) ).flatten()
+        
+        ## mask = np.isin(indices, indices_sub).all(axis=1)         # INACCURATE - DO NOT match row-wise equality but rather checks for individual element existence
+
+        ## # Find row_tuple[0]array rows (xyz points) that are not present in array comb_sub
+        ## row_tuple[0]_view       = row_tuple[0].view(       [('', row_tuple[0].dtype)]      * 3 )
+        ## comb_sub_view = comb_sub.view( [('', comb_sub.dtype)] * 3 )
+        ## # Use np.isin on the views
+        ## mask = np.isin(row_tuple[0]_view, comb_sub_view).flatten()
+
+        # 3. Find rows NOT present (invert mask)
+        remained_points = row_tuple[0][~mask]
+        if len(remained_points) == 0:
+            remained_points = np.empty((0, 3), dtype=float)        # empty 3D numpy array)
+        remained_cavities.append(remained_points)
+        if i<=50:
+            print(f'Number of points at the range {range_label} in cavity #{i} (total {len(row_tuple[0])}): {len(remained_points)}')
+            #print(f'Number of points in sum([sub-regions])/total/remainder in cavity #{i}: sum({[len(sub) for sub in row_tuple[1:]]})={len(comb_sub)}/{len(row_tuple[0])}/{len(remained_points)}')
+
+    print(f'Count of cavities in the range {range_label}: {sum(1 for sublist in remained_cavities if sublist.any())}, number of points: {sum(len(sublist) for sublist in remained_cavities if sublist.all() )}')
+
+    #  Save cavity points to pdb
+    if pdbnm:
+        points = []
+        for sublist in remained_cavities:
+            points.extend(sublist)
+        dump_pdb(np.array(points),f'Grid Points in the range {range_label}', pdbnm)
+
+    stop = timeit.default_timer()
+    print(f"Time for finding cavities in the range {range_label}: {stop - start0:.2f} sec.")
+
+    return remained_cavities
+
+def check_2cavities(cavities1, cavities2, nm1, nm2, grid):
+    for i, (p1, p2) in enumerate(zip(cavities1, cavities2)):
+        # Convert xyz coordinates to integer (i,j,k) indices to insure precise comparison of rows in arrays
+        indices1 = grid.indices(p1)
+        indices2 = grid.indices(p2)
+        # Efficiently find rows in indices not in indices_masked
+        mask12 = (indices1 == indices2[:,None]).all(2).any(0)   # WORKS(!) https://stackoverflow.com/questions/71708091/is-there-an-equivalent-numpy-function-to-isin-that-works-row-based
+        mask21 = (indices2 == indices1[:,None]).all(2).any(0)
+        if np.any(~mask12) or np.any(~mask21):
+            print(f'cavity #{i} mask12: {mask12} != mask21: {mask21}')
+            print(f'cavity #{i} indices1: {indices1}\nindices2: {indices2}')
+            print(f'ERORR: {nm1} != {nm2} for cavity #{i}:')
+            exit()
+    print(f'All cavities in {nm1} == {nm2}.')
+
+def voxel_downsample(points, voxel_size):
+    """
+    Fully vectorized NumPy function for voxel downsampling (uses first point in voxel).
+
+    Parameters:
+    - points (np.ndarray): Input point cloud as a NumPy array (shape [N, 3]).
+    - voxel_size (float): The size of the voxels.
+
+    Returns:
+    - np.ndarray: Downsampled point cloud as a NumPy array.
+    """
+    # Quantize points to voxel indices
+    voxel_indices = (points / voxel_size).astype(np.int32)
+
+    # Use NumPy's built-in unique to find unique voxels
+    # We view the 3D indices as a 1D void array to use np.unique efficiently
+    voxel_array = np.ascontiguousarray(voxel_indices)
+    voxel_view = voxel_array.view( dtype=np.dtype((np.void, voxel_array.dtype.itemsize * voxel_array.shape[1])) )
+    _, unique_indices = np.unique(voxel_view, return_index=True)
+    #print(f'unique_indices: {voxel_indices[unique_indices]}')
+    # Return the points corresponding to the unique voxel indices
+    return points[unique_indices]
+
+def mean_voxel_downsample(points, voxel_size, grid_spacinig):
+    """
+    Downsample a 3D point cloud using a voxel grid approach with centroid approximation.
+
+    Args:
+        points (np.ndarray): Input point cloud as an N x 3 numpy array.
+        voxel_size (float): The side length of the cubic voxels.
+
+    Returns:
+        np.ndarray: The downsampled point cloud as an M x 3 numpy array.
+    """
+    #if points.shape[0] == 0:
+    #    return np.empty((0, 3), dtype=points.dtype)
+
+    # 1. Define the bounds of the original point cloud
+    l_bounds = np.min(points, axis=0)
+    u_bounds = np.max(points, axis=0)
+    boxL = u_bounds - l_bounds
+    #print(f'coordinate range of original points, l_bounds: {l_bounds}, u_bounds: {u_bounds}')
+    #print(f'boxL: {boxL}')
+    shft_points = points - l_bounds   # Shift to the origin such that shft_points are in range [0, u_bounds]
+
+    # 1. Quantize points into voxel indices
+    # floor division gives the integer coordinates of the voxel each point falls into
+    voxel_indices = np.floor(shft_points / voxel_size).astype(int)
+    points_indices = np.floor(shft_points / grid_spacinig).astype(int)
+    #print(f'points_indices:\n{points_indices}')
+
+    # 2. Combine the 3D indices into a single unique key for grouping
+    # Calculate a unique integer for each voxel to use for grouping
+    # Determine the maximum indices to create a unique mapping
+    max_indices = voxel_indices.max(axis=0) + 1
+    # Use a large prime number or similar to ensure unique indices within a reasonable range
+    # Or simply use a single integer key combining the three indices
+    # The method below uses np.unique to find unique indices and then groups based on those
+    
+    # A faster method for grouping is to use the unique feature of numpy which is highly optimized
+    # First, we need to create a structured array or convert to bytes for np.unique to work on rows
+    # A more standard vectorized approach uses a dictionary or more advanced libraries if performance is critical
+    
+    # For a pure NumPy implementation, a common approach involves sorting and then using np.unique
+    
+    # Let's use a method that groups points by their voxel indices efficiently
+    # The `return_inverse=True` from np.unique is key for grouping
+    unique_voxels, inverse_indices = np.unique(voxel_indices, axis=0, return_inverse=True)
+    #print(f'voxel_indices:\n{voxel_indices}\nunique_voxels:\n{unique_voxels}')
+
+    downsampled_points = []
+    for i in range(len(unique_voxels)):
+        ##  # Find all points that fall into this specific voxel
+        ##  points_in_voxel = points[inverse_indices == i]
+        ##  # Calculate the centroid (mean) of these points
+        ##  centroid = np.mean(points_in_voxel, axis=0)
+        ##  downsampled_points.append(centroid)
+
+        # Find mean indexes to ensure mean point belongs to the grid
+        indices_in_voxel = points_indices[inverse_indices == i]
+        #print(f'indices_in_voxel #{i}({unique_voxels[i]}):\n{indices_in_voxel}')
+        centroid_idx3 = np.floor(np.mean(indices_in_voxel, axis=0) + 0.5).astype(int)
+        #print(f'centroid_idx3 = {centroid_idx3}')
+        if np.any(np.all(indices_in_voxel == centroid_idx3, axis=1)):
+        # Get the index of the first True value
+            centroid_index = np.where((points_indices == centroid_idx3).all(axis=1))[0][0]
+            #print(f'voxel #{i}: centroid_index = {centroid_index}, points_indices[{centroid_index}] = {points_indices[centroid_index]}, downsampled_point = {l_bounds+shft_points[centroid_index]}')
+            downsampled_points.append(shft_points[centroid_index])
+        else:
+             #print(centroid_idx3, "not found in the voxel points.")
+             random_voxel_index = np.random.choice(len(indices_in_voxel))
+             #print(f"Pick random voxel point: {indices_in_voxel[random_voxel_index]}")
+             random_index = np.where((points_indices == indices_in_voxel[random_voxel_index]).all(axis=1))[0][0]
+             downsampled_points.append(shft_points[random_index])
+             #exit()
+    #print(f'downsampled_points:\n{l_bounds+downsampled_points}')
+    return np.array(l_bounds + downsampled_points)   # shift back points
+
+def draw_points_vs_downsample(points,downsampled_points):
+    # 5. Visualization (optional)
+    fig = plt.figure(figsize=(10, 5))
+    ax1 = fig.add_subplot(121, projection='3d')
+    ax1.scatter(points[:, 0], points[:, 1], points[:, 2], s=1)
+    ax1.set_title(f'Original Cloud ({points.shape[0]} points)')
+    ax2 = fig.add_subplot(122, projection='3d')
+    ax2.scatter(downsampled_points[:, 0], downsampled_points[:, 1], downsampled_points[:, 2], s=5)
+    ax2.set_title(f'Downsampled Cloud ({downsampled_points.shape[0]} points)')
+    plt.show()
+
+def downsample_poisson_disk(points, min_distance, cloud_cutoff):
+    """
+    Downsamples a 3D point cloud using Poisson Disk sampling to select the 
+    closest points from the original set.
+
+    Args:
+        points (np.ndarray): Original point cloud (N, 3) array.
+        min_distance (float): Minimum distance between generated Poisson Disk samples.
+
+    Returns:
+        np.ndarray: The downsampled point cloud (M, 3) array, subset of original points.
+    """
+    import scipy
+    from scipy.stats import qmc
+    from scipy.spatial import cKDTree
+    from packaging.version import parse
+
+    # 1. Define the bounds of the original point cloud
+    # Scipy.qmc.PoissonDisk requires a bounding box (lower bound, upper bound)
+    l_bounds = np.min(points, axis=0)
+    u_bounds = np.max(points, axis=0)
+    boxL = u_bounds - l_bounds
+    #print(f'points: {points}\nboxL: {boxL}')
+    # Try alternative methods for small or elongated clusters
+    if np.any(boxL < min_distance):   # Small or elongated clusters
+        #print(f'Skipping Poisson Disk Downsampling because boxL({boxL}) < min_distance({min_distance})')
+        return []
+        #downsampled_points = l_bounds + mean_voxel_downsample(points - l_bounds, min_distance, 0.5)   # Shift to the origin as required by voxel_downsample algorithm
+        #if len(downsampled_points) == 0:
+        #     random_index = np.random.choice(len(points))
+        #     downsampled_points = [points[random_index]]
+        #     print(f'Downsampling: Voxel_downsample')
+        #     print(f'ERROR: ZERO downsampled points for the cavity of {len(points)} grid points')
+        #     exit()
+        #return downsampled_points
+    
+    scipy_ver = scipy.__version__
+    if parse(scipy_ver) < parse("1.17.1"):
+        if not hasattr(downsample_poisson_disk, "has_run"):
+            print(f'\nFound SciPy version {scipy_ver} (earlier \"1.17.1\") has a BUG of using \"scipy.stats.qmc.PoissonDisk\" with l_bounds < 0 or >= 1')
+            print(f'    BUG report https://github.com/scipy/scipy/issues/22819: overlapping sampling for negative l_bounds, u_bounds')
+            print(f'    Applying work around by converting points coordinates to the unit cube [0, 1)^3 as in earlier SciPy versions.\n')
+            downsample_poisson_disk.has_run = True
+
+        maxL = np.max(boxL) * (1.0 + np.finfo(boxL[-1].dtype).eps)  # scaling factor of coordinates to scale all points into the cube [0, 1)^3
+        u_bounds = l_bounds + maxL             # Use maxL^3 cube instead of rectangle for uniform space scaling
+        radius_unit_cube = min_distance / maxL # Adjust the min_distance relative to point cloud scale.
+        #print (f'radius_unit_cube: {radius_unit_cube}')
+        # 2. Generate Poisson Disk samples within the bounds
+        # The PoissonDisk sampler generates points with a minimum distance constraint.
+        ## spipy ver < 1.15 qmc.PoissonDisk generates sample in the unit hypercube [0,1)^d ONLY !!!
+        pd_sampler = qmc.PoissonDisk(d=3, radius=radius_unit_cube, seed=1234)
+        unscaled_samples = pd_sampler.fill_space() # generate PD samples in hypercube [0, 1)^d ; n is a rough upper limit for the number of samples
+        #unscaled_samples = pd_sampler.random(n=4000000, workers=-1) # generate PD samples in hypercube [0, 1)^d ; n is a rough upper limit for the number of samples
+
+        # 4. Shift and Scale the samples to your desired bounds
+        pd_samples =  l_bounds + qmc.scale(unscaled_samples, l_bounds, u_bounds)
+        ## print(f'unscaled_samples:{unscaled_samples[:10]}\npd_samples:{pd_samples[:10]}')
+        ## print("Scaled samples shape:", pd_samples.shape)
+        ## print("Scaled samples (first 5):", pd_samples[:5])
+        ## print("Bounds check (min/max):")
+        ## print(np.min(pd_samples, axis=0), np.max(pd_samples, axis=0))
+    
+        # Optional: If you need a specific number of points, you can try adjusting min_distance
+        # or using a library like point-cloud-utils (pcu) which offers direct control 
+        # over the number of samples.
+
+        #return pd_samples
+        #print(f'coordinate range of original points, l_bounds: {l_bounds}, u_bounds: {u_bounds}')
+        scaled_points = (np.array(points) - l_bounds) / maxL
+        #print(f'coordinate range of scaled points, l_bounds: {np.min(scaled_points,axis=0)}, u_bounds: {np.max(scaled_points,axis=0)}')
+
+        # 3. Use a KD-Tree to find the nearest neighbor in the original point cloud for each Poisson sample
+        # This efficiently maps the generated "blue noise" sample locations back to the nearest existing point
+        tree = cKDTree(scaled_points)
+        # dists will be the distances, indices will be the indices into the original points array
+        cutoff_unit_cube = cloud_cutoff / maxL
+        dists, indices = tree.query(unscaled_samples, k=1, distance_upper_bound = cutoff_unit_cube) # distance_upper_bound=cutoff: Tells the tree to ignore neighbors farther than cutoff, returning np.inf as the distance
+        # Filter out the 'inf' distances and associated indices
+        mask = dists < np.inf   # Creates a boolean array to filter out these invalid results
+        filtered_dists = dists[mask]
+        filtered_indices = indices[mask]
+        #print(f'Closest distances from PoissonDisk samples to grid points:\n{filtered_dists[:10] * maxL}')
+    
+        # 4. Filter out duplicate indices (multiple Poisson samples might map to the same original point)
+        # and remove points outside a reasonable distance threshold if necessary (though with
+        # well-defined bounds and dense original cloud, this should be fine)
+        unique_indices = np.unique(filtered_indices)
+        downsampled_scaled_points = scaled_points[unique_indices]
+        downsampled_points = l_bounds + maxL * downsampled_scaled_points   # Shift and Scale back the points from the unit cube [0, 1)^3
+
+    else:
+        if not hasattr(downsample_poisson_disk, "has_run"):
+            print(f'\nFound SciPy version {scipy_ver} (higher \"1.17.1\") has FIXED the BUG of using \"scipy.stats.qmc.PoissonDisk\" with l_bounds < 0 or >= 1!')
+            print(f'    BUG report https://github.com/scipy/scipy/issues/22819: overlapping sampling for negative l_bounds, u_bounds')
+            print(f'    Use the function \"scipy.stats.qmc.PoissonDisk\" with l_bounds and u_bounds directly.\n')
+            downsample_poisson_disk.has_run = True
+
+        ## spipy ver >= 1.15 qmc.PoissonDisk generates sample in the arbitrary rectange _bounds=l_bounds, u_bounds=u_bounds but with BUG until ver 1.17.1
+        pd_sampler = qmc.PoissonDisk(d=3, radius=min_distance, l_bounds=l_bounds, u_bounds=u_bounds, seed=1234)   # spipy ver >= 1.15
+        pd_samples = pd_sampler.random(n=1000000) # generate PD samples in hypercube [0, 1)^d ; n is a rough upper limit for the number of samples
+        #return pd_samples
+    
+        # 3. Use a KD-Tree to find the nearest neighbor in the original point cloud for each Poisson sample
+        # This efficiently maps the generated "blue noise" sample locations back to the nearest existing point
+        tree = cKDTree(points)
+        # dists will be the distances, indices will be the indices into the original points array
+        dists, indices = tree.query(pd_samples, k=1, distance_upper_bound = cloud_cutoff) # distance_upper_bound=cutoff: Tells the tree to ignore neighbors farther than cutoff, returning np.inf as the distance
+        # Filter out the 'inf' distances and associated indices
+        mask = dists < np.inf   # Creates a boolean array to filter out these invalid results
+        filtered_dists = dists[mask]
+        filtered_indices = indices[mask]
+        print(f'Closest distances from PoissonDisk samples to grid points:\n{filtered_dists[:10]}')
+    
+        # 4. Filter out duplicate indices (multiple Poisson samples might map to the same original point)
+        # and remove points outside a reasonable distance threshold if necessary (though with
+        # well-defined bounds and dense original cloud, this should be fine)
+        unique_indices = np.unique(filtered_indices)
+        downsampled_points = points[unique_indices]
+
+    # if len(downsampled_points) == 0:
+    #      random_index = np.random.choice(len(points))
+    #      downsampled_points = [points[random_index]]
+    #      print(f'Downsampling: Poisson Disk')
+    #      print(f'ERROR: ZERO downsampled points for the cavity of {len(points)} grid points.')
+    #      print(f'Picking a random grid point.')
+    #      #exit()
+
+    #draw_points_vs_downsample(points, downsampled_points)   # Draw and compare side-by-side points with dowmsampled points
+    return downsampled_points
+
+def downsample_cavity_clouds(cav_obj, min_distance):
+    grid_spacing = cav_obj.grid_spacing
+    #downsample_cloud_cutoff = grid_spacing * np.sqrt(3.0) / 2.0
+    downsample_cloud_cutoff = grid_spacing * 2.0
+    print('-' * 70)
+    print(f'\nDownsampling cavity grid points by Quasi-Monte-Carlo Poisson Disk algorithm ...\n')
+    downsampled_cavities = []
+    for points in cav_obj.cavities:
+        if len(points) > 1:
+            downsampled_points = []
+            for scale_tol in [1.0, 0.9, 0.8, 0.75]:  # Try few attempts to fill the cavity with scaled min_distance paramter
+                downsampled_points = downsample_poisson_disk(np.array(points), min_distance * scale_tol, downsample_cloud_cutoff)
+                if len(downsampled_points) > 0: break
+
+            # If no downsampled_points then try alternative voxel_downsample method 
+            if len(downsampled_points) == 0:
+                downsampled_points = mean_voxel_downsample(np.array(points), min_distance, grid_spacing)
+
+                # If no downsampled_points then pick single random point
+                if len(downsampled_points) == 0:
+                    random_index = np.random.choice(len(points))
+                    downsampled_points = [points[random_index]]
+                    print(f'ERROR: ZERO downsampled points for the cavity of {len(points)} grid points.')
+                    print(f'Picking a random grid point.')
+                    #exit()
+        else:
+            downsampled_points = np.array(points)
+
+        downsampled_cavities.append(downsampled_points)
+        print(f'Number of points in the cavity {len(downsampled_cavities)}: original {len(points)}, downsampled {len(downsampled_points)}')
+
+    #downsampled_points = []
+    #for sublist in downsampled_cavities:
+    #    downsampled_points.extend(sublist)
+    #dump_pdb(np.array(downsampled_points),f'Grid Points Downsampled within {min_distance} A' , f'cavities_downsampled_{str(min_distance)}.pdb')
+    downsampled_obj = Cav(downsampled_cavities, grid_spacing=min_distance)
+    num_points, num_cavs = downsampled_obj.count_points()
+    print(f'Number of downsampled points is {num_points} in {num_cavs} cavities.')
+
+    downsampled_obj.save_cavities(f'cavs_grd{cav_obj.grid_spacing}_downsampled{str(min_distance)}.pdb', "REMARK Downsampled Cavities\n")
+    print('-' * 70)
+    return downsampled_cavities
+
+def search_close_no_water_cav(water, protein, cav_obj, n, Nref: int, cutoff1, cutoff2, ratio1, ratio2):
+    """
+    Search for no water (within n closest atoms) sites in "cavities" points within cutoff
+    ----------------------------------------------------------------------------
+    atoms: ndarray N x 7
+    Array of other atoms' information
+
+    cavities: ndarray N x 3
+    Array of cavity points in points
+
+    n: int
+    Number of closest atoms
+
+    Nref: int
+    Reference number for striding sites within cuoff1. If Nref < 1 then all sites are used.
+
+    ratio1: in respect to Nref1 (number of strided sites within cutoff1)
+    Portion of the Nref1 for striding sites within cutoff2
+
+    ratio2: in respect to Nref1 (number of strided sites within cutoff1)
+    Portion of the Nref1 for striding sites out of cutoff2
+    ----------------------------------------------------------------------------
+    Returns:
+    training_X: P x n x 7
+    training X data
+    """
+    min_distance = 2.05   # Grid downsampling minimum distance parameter
+    downsampled_cavities = downsample_cavity_clouds(cav_obj, min_distance)
+    #exit()
+
+    #cutoff1  = 3.5
+    #cutoff2  = 4.5
+    #ratio1 = 0.1
+    #ratio2 = 0.05
+    C = len(downsampled_cavities)
+    HOH_encoding = feature_encoder_residue(residue_types['HOH'])
+    closest_at_dist =[]
+
+    no_water0 = []    # sites in the range-0:            r <= cutoff1
+    no_water1 = []    # sites in the range-1: cutoff2 >= r > cutoff1
+    no_water2 = []    # sites in the range-2:            r > cutoff2
+    closest0_at_dist =[]    # closest atom distances in the range-0, -1 and -2
+    closest1_at_dist =[]
+    closest2_at_dist =[]
+
+    # setup and mask the grid
+    print(f"setup grid")
+    grid_spacing, cushion  = cav_obj.grid_spacing, 0
+    grid = setup_grid(protein[:,4:7], grid_spacing, cushion)
+    print(f'Grid Origin: {grid.origin}, extent: {grid.extent}, grid size: {np.prod(grid.extent)}')
+
+    # mask the grid
+    start = timeit.default_timer()
+
+    print(f"Mask the grid within cutoff {cutoff2}")
+    radii2 = np.full(len(protein), cutoff2, dtype=float)
+    mask2 = 2
+    mask_grid(grid, protein[:,4:7], radii2, mask2)
+    count = np.sum(grid.get_grid() == mask2)
+    print(f'Count of masked by mask({mask2}) elements: {count}, Sum of grid points: {np.sum(grid.get_grid())}')
+
+    print(f"Mask the grid within cutoff {cutoff1}")
+    radii1= np.full(len(protein), cutoff1, dtype=float)
+    mask1 = 1
+    mask_grid(grid, protein[:,4:7], radii1, mask1)
+    count1 = np.sum(grid.get_grid() == mask1)
+    count2 = np.sum(grid.get_grid() == mask2)
+    print(f'Count of masked by mask({mask1})/mask({mask2}) elements: {count1}/{count2}')
+
+    cutoff_Wpdb = 4.0
+    radii_Wpdb= np.full(len(water), cutoff_Wpdb, dtype=float)
+    mask_Wpdb = 9
+    print(f"Mask the grid within {cutoff_Wpdb}A from {len(water)} PDB water by mask({mask_Wpdb})")
+    mask_grid(grid, water[:,4:7], radii_Wpdb, mask_Wpdb)
+    count1 = np.sum(grid.get_grid() == mask1)
+    count2 = np.sum(grid.get_grid() == mask2)
+    count_Wpdb = np.sum(grid.get_grid() == mask_Wpdb)
+    print(f'Count of masked by mask({mask1})/mask({mask2})/mask({mask_Wpdb}) elements: {count1}/{count2}/{count_Wpdb}')
+
+    stop = timeit.default_timer()
+    print(f"Time for masking by mask({mask1}), mask({mask2}), mask({mask_Wpdb}): {stop - start:.2f} sec.")
+
+
+    cavities1     = find_masked_cavities(downsampled_cavities, grid, mask1,      f'within {cutoff1}A'                   )
+    cavities2     = find_masked_cavities(downsampled_cavities, grid, mask2,      f'{cutoff1}A <= r < {cutoff2}A'        )
+    cavities_Wpdb = find_masked_cavities(downsampled_cavities, grid, mask_Wpdb,  f'within {cutoff_Wpdb}A from PDB water')
+
+
+    cavities3     = find_remained_cavities(downsampled_cavities, cavities1, cavities2, cavities_Wpdb,
+                                           grid = grid, range_label = f'out {cutoff2}A', pdbnm = f'cavities_out{cutoff2}A.pdb')   # (!) After *sub_cavities "wildcad" argument all arguments must be named
+    ## # Alternative (but very slow) way to get cavities3 in the range out of cutoff2
+    ## cavities3b    = find_masked_cavities(downsampled_cavities, grid, 0,          f'out {cutoff2}A'                      )
+    ## check_2cavities(cavities3, cavities3b, 'cavities3', 'cavities3a', grid)           # Check identity cavities3 generated by two methods (for debugging)
+
+
+    for (cav1, cav2, cav3) in zip(cavities1, cavities2, cavities3):
+        for point in cav1:
+            n_nearest_atoms = find_n_nearest_atoms(point, protein, n)
+            closest_at_dist.append(n_nearest_atoms[0, -1])
+            closest0_at_dist.append(n_nearest_atoms[0, -1])
+            no_water0.append(point)
+
+        for point in cav2:
+            n_nearest_atoms = find_n_nearest_atoms(point, protein, n)
+            closest_at_dist.append(n_nearest_atoms[0, -1])
+            closest1_at_dist.append(n_nearest_atoms[0, -1])
+            no_water1.append(point)
+
+        for point in cav3:
+            n_nearest_atoms = find_n_nearest_atoms(point, protein, n)
+            closest_at_dist.append(n_nearest_atoms[0, -1])
+            closest2_at_dist.append(n_nearest_atoms[0, -1])
+            no_water2.append(point)
+
+    ##
+    ##  Check distances of Points to PDB Water
+    ##
+    ## closest_wat_dist = []
+    ## closest0_wat_dist = []
+    ## closest1_wat_dist = []
+    ## closest2_wat_dist = []
+    ## for (cav1, cav2, cav3) in zip(cavities1, cavities2, cavities3):
+    ##     for point in cav1:
+    ##         nearest_wat = find_n_nearest_atoms(point, water, 1)
+    ##         closest_wat_dist.append(nearest_wat[0, -1])
+    ##         closest0_wat_dist.append(nearest_wat[0, -1])
+## 
+    ##     for point in cav2:
+    ##         nearest_wat = find_n_nearest_atoms(point, water, 1)
+    ##         closest_wat_dist.append(nearest_wat[0, -1])
+    ##         closest1_wat_dist.append(nearest_wat[0, -1])
+## 
+    ##     for point in cav3:
+    ##         nearest_wat = find_n_nearest_atoms(point, water, 1)
+    ##         closest_wat_dist.append(nearest_wat[0, -1])
+    ##         closest2_wat_dist.append(nearest_wat[0, -1])
+## 
+    ## draw_distance_histogram(closest_wat_dist, 100, f'Distribution of ALL cavity no-water Point-Atom(P) Distances to Water',  cutoff_Wpdb, 6.0)
+    ## draw_distance_histogram(closest0_wat_dist, 50, f'Distribution of cavity no-water Point-Atom(P) Distances to Water =< {cutoff1}A', cutoff_Wpdb, 6.0)
+    ## draw_distance_histogram(closest1_wat_dist, 50, f'Distribution of cavity no-water Point-Atom(P) Distances to Water =< {cutoff2}A', cutoff_Wpdb, 6.0)
+    ## draw_distance_histogram(closest2_wat_dist, 50, f'Distribution of cavity no-water Point-Atom(P) Distances to Water > {cutoff2}A', cutoff_Wpdb, 6.0)
+
+    ## for cav in downsampled_cavities:
+    ##     for grd_point in cav:
+    ##         n_nearest_atoms = find_n_nearest_atoms(grd_point, protein, n)
+    ##         HOH_check = n_nearest_atoms[:, 2:4] - HOH_encoding
+    ##         if not np.any(HOH_check == 0.0):
+    ##             closest_at_dist.append(n_nearest_atoms[0, -1])
+    ##             if (n_nearest_atoms[0, -1] <= cutoff1 ):
+    ##                 closest0_at_dist.append(n_nearest_atoms[0, -1])
+    ##                 no_water0.append(grd_point)
+    ##             else:
+    ##                 if (n_nearest_atoms[0, -1] <= cutoff2 ):
+    ##                     closest1_at_dist.append(n_nearest_atoms[0, -1])
+    ##                     no_water1.append(grd_point)
+    ##                 else:
+    ##                     closest2_at_dist.append(n_nearest_atoms[0, -1])
+    ##                     no_water2.append(grd_point)
+    ## #    print(f'cav_grid({i}) closest atom disdtance:{closest_at_dist[k]}')
+    ##     #closest_at_dist.append(n_nearest_atoms[0, -1])
+    ##     #if  n_nearest_atoms[0, -1] > 10.0: print(f'Distances to 10 nearest_atoms with closest_at_dist>10A: {n_nearest_atoms[:, -1]}')
+
+
+
+    num0 = len(no_water0)
+    num1 = len(no_water1)
+    num2 = len(no_water2)
+    print(f'Found {num0+num1+num2} no water sites (before balancing) out of total {sum(len(cav) for cav in downsampled_cavities if cav.all())} in {C} cavities')
+    print(f'Found {len(closest_at_dist)} sites apart >{cutoff_Wpdb}A from PDB water')
+    print(f'NO water sites before balancing: {num0}/{num1}/{num2} within {cutoff1}/{cutoff2}A and out of {cutoff2}A, respectively.')
+    draw_distance_histogram(closest_at_dist, 100, f'Distribution of ALL cavity no-water Point-Atom(P) Distances',  cutoff1, cutoff2)
+    draw_distance_histogram(closest0_at_dist, 50, f'Distribution of cavity no-water Point-Atom(P) Distances =< {cutoff1}A', 2.3, 3.5)
+    draw_distance_histogram(closest1_at_dist, 50, f'Distribution of cavity no-water Point-Atom(P) Distances =< {cutoff2}A', 2.3, 3.5)
+    draw_distance_histogram(closest2_at_dist, 50, f'Distribution of cavity no-water Point-Atom(P) Distances > {cutoff2}A', 2.3, 3.5)
+
+    #print(f'Distances to nearest_atoms : {closest_at_dist[:100]}')
+    
+    # Compose final (balanced) No-water sites from no_water0, no_water1 and no_water2
+    #interval = round( float(num0) / float(Nref) )   # striding interval
+    #Nref = num0 / interval if num0 / interval >= 1 else 1
+
+    no_water_site, closest_at_dist = stride_sites(no_water0, closest0_at_dist, Nref, 1.0, 'dist =< ' + str(cutoff1))
+    draw_distance_histogram(closest_at_dist, 30, 'Distribution of Balanced cavity no-water sites Distances =< '  + str(cutoff1), 2.3, 3.5)
+    
+    Nref1 = len(no_water_site)
+    no_water_site1, closest1_at_dist = stride_sites(no_water1, closest1_at_dist, Nref1, ratio1, 'dist =< ' + str(cutoff2))
+    draw_distance_histogram(closest1_at_dist, 30, 'Distribution of Balanced cavity no-water sites Distances =< '  + str(cutoff2), 2.3, 3.5)
+
+    no_water_site2, closest2_at_dist = stride_sites(no_water2, closest2_at_dist, Nref1, ratio2, 'dist > ' + str(cutoff2))
+    draw_distance_histogram(closest2_at_dist, 30, 'Distribution of Balanced cavity no-water sites Distances > '  + str(cutoff2), 2.3, 3.5)
+
+    no_water_site   = no_water_site   + no_water_site1   + no_water_site2
+    closest_at_dist = closest_at_dist + closest1_at_dist + closest2_at_dist
+    draw_distance_histogram(closest_at_dist, 100, 'Final Distribution of All Balanced cavity no-water sites Distances', cutoff1, cutoff2)
+    print(f'Number of generated cavity sites with NO water: {len(no_water_site)}')
+    return np.array(no_water_site)
+
+
+
 def generate_training_no_X(atoms, cavities, n, interval: int):
     """
     Generate X training data for no cases for neural network
@@ -1067,7 +2134,7 @@ def generate_training_no_X(atoms, cavities, n, interval: int):
     Array of other atoms' information
 
     cavities: ndarray N x 3
-    Array of cavity points in xyz
+    Array of cavity points in points
 
     n: int
     Number of closest atoms
@@ -1139,7 +2206,7 @@ def generate_training_no_X(atoms, cavities, n, interval: int):
     Array of other atoms' information
 
     cavities: ndarray N x 3
-    Array of cavity points in xyz
+    Array of cavity points in points
 
     n: int
     Number of closest atoms
@@ -1301,7 +2368,6 @@ def check_water_enviroment(waters, env_waters, protein, cutoff_clash, Nmax = 1, 
     W = waters.shape[0]
 
     sites_no_P = []
-    sites_clash_P = []
     idx_no_P = []
     idx_clash_P = []
     dist_P = []
@@ -1323,7 +2389,6 @@ def check_water_enviroment(waters, env_waters, protein, cutoff_clash, Nmax = 1, 
             dist_P.append(closest_atoms_P[0,-1]) # idx=0 closest atom because closest_atoms is ordered array
 
         if len(closest_atoms_clash_P) > 0:
-            sites_clash_P.append(waters[i,-3:])
             idx_clash_P.append(i + pdb_idx_shift)
             water_clash.append(waters[i])
         else:
@@ -1364,9 +2429,14 @@ def check_water_enviroment(waters, env_waters, protein, cutoff_clash, Nmax = 1, 
         print(f'Will use these {nprint} water sites as NO cases')
         print(f'Number of remained water Yes cases after excluding {nprint} clashed sites is {len(water_ok)}.')
         if nprint > maxprint: nprint = maxprint
-        print(f'Indecies of first {nprint} sites with P-Env clash within cutoff_clash = {cutoff_clash}:', idx_clash_P[:nprint])
+        print(f'Indices of first {nprint} water sites with P-Env clash within cutoff_clash = {cutoff_clash}: {idx_clash_P[:nprint]}\n')
+    if len(sites_no_P) > 0:
+        nprint = len(sites_no_P)
+        print(f'Found {len(sites_no_P)} water molecules outside the cutoff from Protein atoms')
+        if nprint > maxprint: nprint = maxprint
+        print(f'Indices of first {nprint} water sites outside the cutoff {cutoff} from Protein: {idx_no_P[:nprint]}\n')
 
-    print(f'Computed distnaces for {len(dist_P)} water molecules and closest Protein atom within cutoff')
+    print(f'Analized distances for {len(dist_P)} water molecules and closest Protein atom within cutoff')
     print(f'{dist_P[0:5]}')
     dist_sorted = np.sort(dist_P)
     print(f'{dist_sorted[0:10]}')
@@ -1386,7 +2456,6 @@ def check_water_enviroment(waters, env_waters, protein, cutoff_clash, Nmax = 1, 
     w_water_ok = []
     w_water_clash = []
     sites_no_W = []
-    sites_clash_W =[]
     idx_no_W = []
     idx_clash_W =[]
     for i in range(W):
@@ -1403,7 +2472,6 @@ def check_water_enviroment(waters, env_waters, protein, cutoff_clash, Nmax = 1, 
             dist_W.append(closest_atoms_W[0,-1]) # idx=0 closest atom because closest_atoms is ordered array
 
         if len(closest_atoms_clash_W) > 0:
-            sites_clash_W.append(waters[i,-3:])
             idx_clash_W.append(i + pdb_idx_shift)
             w_water_clash.append(waters[i])
         else:
@@ -1414,7 +2482,7 @@ def check_water_enviroment(waters, env_waters, protein, cutoff_clash, Nmax = 1, 
         print('-------------')
         print(f'Found {nprint} water sites with W-W clash within cutoff_clash = {cutoff_clash}')
         if nprint > maxprint: nprint = maxprint
-        print(f'Indecies of first {nprint} sites with W-W clash within cutoff_clash = {cutoff_clash}:', idx_clash_P[:nprint])
+        print(f'Indices of first {nprint} sites with W-W clash within cutoff_clash = {cutoff_clash}:', idx_clash_W[:nprint])
         print('NOTE: water_OK is defined by Water-Protein distance only, W-W clash does not affect the selection.')
         
     ## Add Water sites outside cutoff for drawing W-W distance distribution
@@ -1478,9 +2546,9 @@ def generate_no_X_clash(check_title, waters, protein, cutoff_clash, n = 10, pdb_
         print(f'Will use these {nprint} positions of clashed water as NO cases')
         print(f'Number of remained water Yes cases after excluding {nprint} positions of clashed water is {len(waters_low_E)}.')
         if nprint > 30: nprint = 30
-        print(f'Indecies of first 30 sites with P-Env clash within cutoff_clash = {cutoff_clash}:', idx_clash_P[:nprint])
+        print(f'Indices of first 30 sites with P-Env clash within cutoff_clash = {cutoff_clash}:', idx_clash_P[:nprint])
 
-    print(f'Computed distnaces for {len(dist_P)} water molecules and closest Protein atom within cutoff')
+    print(f'Computed distances for {len(dist_P)} water molecules and closest Protein atom within cutoff')
     print(f'{dist_P[0:5]}')
     dist_sorted = np.sort(dist_P)
     print(f'{dist_sorted[0:10]}')
@@ -1579,7 +2647,7 @@ def read_pdb(input_pdb):
     num_of_residue_types = len(residue_types.keys())
     for line in atom_info:
         one_data = np.array([])
-        xyz = [float(x) for x in line[30:53].split()]
+        points = [float(x) for x in line[30:53].split()]
         # read in the atom name
         atom_type = str(line[13:16]).strip()
         res_type = str(line[17:20]).strip()
@@ -1605,7 +2673,7 @@ def read_pdb(input_pdb):
 
         one_data = np.append(one_data, atom_encode)
         one_data = np.append(one_data, residue_encode)
-        one_data = np.append(one_data, xyz)
+        one_data = np.append(one_data, points)
         if res_type == 'HOH':
             water_data.append(one_data)
         elif res_type == 'ENW':
@@ -1615,6 +2683,75 @@ def read_pdb(input_pdb):
 
     return np.array(water_data), np.array(env_water_data), np.array(protein_data)
 
+def read_cavitomix_pdb(input_pdb):
+    """
+    reads a pdb file and returns numpy array of water data and protein data
+    ----------------------------------------------------------------------------
+    input_pdb: str
+    path to pdb file
+    ----------------------------------------------------------------------------
+    Returns:
+    water_data, protein_data: ndarray: N x 7
+    """
+    print('-' * 70)
+    print(f'\nLoading cavities from the CavitOmiX file:\n')
+    # read in the pdb file
+    pdb_file = open(input_pdb)
+    #cav_info = [line for line in pdb_file.readlines() if line.startswith('REMARK')]
+    #cav_data = [line for line in pdb_file.readlines() if line.startswith('HETATM')]
+    cav_data = [line for line in pdb_file.readlines() if (line.startswith('REMARK') or line.startswith('HETATM') )]
+    # Read cavity parameters, e.g. grid spacing, prob radius
+    for line in cav_data[:20]:
+        if line.startswith('REMARK'):
+            print(line, end="")
+            result = line.split("grid spacing:")
+            if len(result)==2:
+                grid_spacing = float(result[1].strip())
+    if grid_spacing is None:
+        print(f'ERROR: grid_spacing value could not be extracted from cavity file {input_pdb}.')
+        print(f'ERROR: make sure the file is in the CavitOmiX format and has the field \"^REMARK grid spacing: float_val\").')
+        exit()
+    print(f'Extracted grid_spacing: {grid_spacing}')
+
+
+    # Read cavity gridpoints partitioned by cavities
+    cavities, cav = [], []
+    current = -9999999
+    bNew = True
+    num_grid_tot = 0
+    num_cav_declared = None
+    for line in cav_data[20:]:
+        if line.startswith('REMARK'):
+            if not bNew: bNew = True
+            result = line.split("number of grid_points:")
+            if len(result)==2:
+                num_cav_declared = int(result[1].strip())
+            #print(line, end="")
+        elif line.startswith('HETATM'):
+            resid = int(line[22:26])
+            points = [float(x) for x in line[30:53].split()]
+            if resid == current:
+                cav.append(points)
+            elif resid > current:
+                num_cav_grid = len(cav)
+                if  (not bNew) and (num_cav_declared is not None) and (num_cav_declared != num_cav_grid):
+                    print(f'ERROR: cavity-{len(cavities)}, number of loaded grid points {num_cav_grid} differs from the declared number {num_cav_declared}.')
+                    exit()
+                if current > -9999999:
+                    cavities.append(cav)
+                num_grid_tot += num_cav_grid
+                #print(f'Loaded cavity {len(cavities)} with {num_cav_grid} grid points.')
+                cav = [points]
+                bNew = False
+                current = resid
+            else:
+                print(f'ERROR: inconsistent resid ({line[22:26]}) at line\n\"{line}\"')
+                exit()
+    cavities.append(cav)   # append the last cavity for which there is no cavity delimiter in pdb
+    num_grid_tot += len(cav)
+    print(f'Loaded {len(cavities)} cavities with total {num_grid_tot} grid points from cavity file {input_pdb}')
+    #print('-' * 70)
+    return Cav(cavities=cavities, grid_spacing=grid_spacing)
 
 def read_cavities(cavities_pdb):
     """
@@ -1632,8 +2769,8 @@ def read_cavities(cavities_pdb):
                 line.startswith('HETATM')]
     cavities_data = []
     for line in cav_info:
-        xyz = [float(x) for x in line[30:53].split()]
-        cavities_data.append(xyz)
+        points = [float(x) for x in line[30:53].split()]
+        cavities_data.append(points)
 
     return np.array(cavities_data)
 
@@ -1679,7 +2816,7 @@ def check_conserved_components(arr2d,arrname='arr2d'):
         print(f'delta = max_val - min_val:')
         print_arr_nByRow(delta, 7, 8)
         zero_indices = np.where(delta == 0)[0]
-        print(f'Indecies of conserved coordinates in the array "{arrname}":{zero_indices}')
+        print(f'Indices of conserved coordinates in the array "{arrname}":{zero_indices}')
 
 import argparse
 parser = argparse.ArgumentParser(
@@ -1706,7 +2843,7 @@ if __name__ == '__main__':
     basename = os.path.basename(input_pdb)
     pdb_name = os.path.splitext(basename)[0]
     water_data, env_water_data, protein_data = read_pdb(input_pdb)
-    cavities_data = read_cavities(input_cavities)
+
     #if hasattr(args, 'descriptor_type') and args.descriptor_type: descriptor = args.descriptor_type
     descriptor = args.descriptor_type
     print(f'Using descriptor type  = \"{descriptor}\"')
@@ -1717,6 +2854,11 @@ if __name__ == '__main__':
     print(f'PDB includes {len(water_data)} water, {len(env_water_data)} env-water and {len(protein_data)} protein atoms')
     print("Generating training data...")
     starting_time = timeit.default_timer()
+
+    cav_obj = read_cavitomix_pdb(input_cavities)
+    #cavities_data = read_cavities(input_cavities)
+    #no_water_cav = search_close_no_water_cav(water_data, protein_data, cav_obj, n=10,
+    #                        Nref=len(water_data),    cutoff1=3.5,cutoff2=4.5,ratio1=0.1,ratio2=0.05) # Generate Nref number of No-water cavity sites
 
     ##
     ## Generate Water/noWater Sites
@@ -1739,25 +2881,35 @@ if __name__ == '__main__':
     #noW_cav_sites = noW_nearestN_cavity_grid(input_cavities, total_data, n=10)
     #training_no_X = generate_Z_descriptors(noW_cav_sites, total_data, n=10)
 
-    num_of_cav = cavities_data.shape[0]
-    print("number of no cases before balancing: %d" % num_of_cav)
+    #num_of_cav = cavities_data.shape[0]
+    #print("number of no cases before balancing: %d" % num_of_cav)
     #interval_of_no_cases = int(num_of_cav / water_OK.shape[0])
     #interval_of_no_cases = int(num_of_cav / water_data.shape[0])
     #interval_of_no_cases = int(num_of_cav / training_yes_X.shape[0])
     #no_water_cav = search_no_water_sites(total_data, cavities_data, n=10, interval=interval_of_no_cases / 2)
 
+
+    water_data_total = water_data
+    if len(env_water_data) > 0:
+        water_data_total = np.concatenate( (water_data, env_water_data), axis=0)
+
     balance_np_samples = args.balance_data
     if balance_np_samples:
         # Generate Nref number of No-water cavity sites
-        no_water_cav = search_close_no_water_sites(total_data, cavities_data, n=10,
+        no_water_cav = search_close_no_water_cav(water_data_total, protein_data, cav_obj, n=10,
                             Nref=len(water_OK),    cutoff1=3.5,cutoff2=4.5,ratio1=0.1,ratio2=0.05) # Generate Nref number of No-water cavity sites
+        #no_water_cav = search_close_no_water_sites(total_data, cavities_data, n=10,
+        #                    Nref=len(water_OK),    cutoff1=3.5,cutoff2=4.5,ratio1=0.1,ratio2=0.05) # Generate Nref number of No-water cavity sites
     else:
         # Generate ALL No-water cavity sites, No striding within cutoff1
         # Set Nref=0 because no balancing of No-cases is required.
         # Data balancing is taken care at the traning model stage by adjusting 1) water weights; 2) --balance_y_no
-        no_water_cav = search_close_no_water_sites(total_data, cavities_data, n=10,
+        no_water_cav = search_close_no_water_cav(water_data_total, protein_data, cav_obj, n=10,
                             Nref=0,                cutoff1=3.5,cutoff2=4.5,ratio1=0.05,ratio2=0.02) # Generate ALL No-water cavity sites, No striding within cutoff1
-
+        #no_water_cav = search_close_no_water_cav(total_data, cavities, n=10,
+        #                    Nref=0,                cutoff1=3.5,cutoff2=4.5,ratio1=0.05,ratio2=0.02) # Generate ALL No-water cavity sites, No striding within cutoff1
+        #no_water_cav = search_close_no_water_sites(total_data, cavities_data, n=10,
+        #                    Nref=0,                cutoff1=3.5,cutoff2=4.5,ratio1=0.05,ratio2=0.02) # Generate ALL No-water cavity sites, No striding within cutoff1
     #training_no_X = generate_training_no_X(total_data, cavities_data, n=10,interval=interval_of_no_cases / 2)
 
     ##
