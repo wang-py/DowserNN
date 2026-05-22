@@ -52,26 +52,27 @@ def gaussian(energies, cutoff=-4):
 
 
 def plot_water_data(acc_and_bfactors, sorted_by='accuracy'):
+    accuracy_threshold = 0.5
+    energy_threshold = -4.0
     fig, ax = plt.subplots(3, 1, figsize=(8, 6))
     print(acc_and_bfactors)
     if sorted_by == 'accuracy':
-        acc_and_bfactors = acc_and_bfactors[
-            acc_and_bfactors[:, 0].argsort()
-            ]
+        acc_and_bfactors = acc_and_bfactors[ acc_and_bfactors[:, 0].argsort()]
+        P = gaussian(acc_and_bfactors[:, 0], cutoff=accuracy_threshold)
+        P_threshold = 0.5
     elif sorted_by == 'energy':
-        acc_and_bfactors = acc_and_bfactors[
-            acc_and_bfactors[:, 1].argsort()
-            ]
+        acc_and_bfactors = acc_and_bfactors[ acc_and_bfactors[:, 1].argsort() ]
+        P = gaussian(acc_and_bfactors[:, 1], cutoff=energy_threshold)
+        P_threshold = 0.5
+
 
     accuracy_values = acc_and_bfactors[:, 0]
     water_energies = acc_and_bfactors[:, 1]
-    accuracy_threshold = 0.5
     num_above_threshold_acc = np.sum(accuracy_values > accuracy_threshold)
     num_of_water = accuracy_values.shape[0]
     percent_above_threshold_acc = num_above_threshold_acc / num_of_water
-    energy_threshold = -4
-    num_above_threshold_E = np.sum(water_energies > energy_threshold)
-    percent_above_threshold_E = num_above_threshold_E / num_of_water
+    num_below_threshold_E = np.sum(water_energies < energy_threshold)
+    percent_above_threshold_E = num_below_threshold_E / num_of_water
     ax[0].bar(np.arange(num_of_water), accuracy_values)
     ax[0].axhline(accuracy_threshold, color='k', linestyle='--',
                   label=f'accuracy threshold = {accuracy_threshold}\n' +
@@ -80,14 +81,13 @@ def plot_water_data(acc_and_bfactors, sorted_by='accuracy'):
     ax[0].legend()
     ax[1].bar(np.arange(num_of_water), water_energies)
     ax[1].axhline(energy_threshold, color='k', linestyle='--',
-                  label=f'energy threshold = {energy_threshold} kCal/mol\n' +
-                  f'% water above threshold: {percent_above_threshold_E:.0%}')
+                  label=f'energy threshold = {energy_threshold} kcal/mol\n' +
+                  f'% water below threshold: {percent_above_threshold_E:.0%}')
     # ax[0].set_xlabel("water index")
-    ax[1].set_ylabel("energy [kCal/mol]")
+    ax[1].set_ylabel("energy [kcal/mol]")
     ax[1].legend()
     # ax[0].set_xlabel("water index")
-    P = gaussian(water_energies, cutoff=energy_threshold)
-    P_threshold = 0.5
+
     num_above_threshold_P = np.sum(P > P_threshold)
     percent_above_threshold_P = num_above_threshold_P / num_of_water
     ax[2].bar(np.arange(num_of_water), P)
